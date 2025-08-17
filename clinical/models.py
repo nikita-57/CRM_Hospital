@@ -1,0 +1,41 @@
+from django.db import models
+from django.conf import settings
+from patients.models import Patient
+
+class Encounter(models.Model):
+    class Status(models.TextChoices):
+        PLANNED="PLANNED","Запланирован"
+        INPROGRESS="INPROGRESS","В процессе"
+        FINISHED="FINISHED","Завершен"
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="encounters")
+    doctor  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="encounters")
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(null=True, blank=True)
+    reason = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNED)
+
+class Note(models.Model):
+    encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="notes")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    text = models.TextField()
+
+class Diagnosis(models.Model):
+    encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="diagnoses")
+    code = models.CharField(max_length=20)      # например, ICD-10
+    description = models.CharField(max_length=255)
+
+class Prescription(models.Model):
+    encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="prescriptions")
+    medication = models.CharField(max_length=120)
+    dosage = models.CharField(max_length=120)           # 500 mg
+    frequency = models.CharField(max_length=120)        # 2 раза в день
+    duration_days = models.PositiveIntegerField(default=1)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Attachment(models.Model):
+    encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="attachments")
+    file = models.FileField(upload_to="attachments/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    title = models.CharField(max_length=255, blank=True)

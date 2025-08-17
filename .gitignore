@@ -1,0 +1,21 @@
+# Виртуальное окружение
+venv/
+.venv/
+
+# Файлы ОС
+.DS_Store
+Thumbs.db
+
+# Файлы IDE
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Node.js
+node_modules/
+
+# Секретные файлы
+.env

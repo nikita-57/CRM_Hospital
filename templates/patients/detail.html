@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Карточка пациента — MedCRM{% endblock %}
+{% block content %}
+<h3>{{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}</h3>
+<p class="text-muted">ДР: {{ object.birth_date }} • Полис: {{ object.insurance_number }} • Тел.: {{ object.phone }}</p>
+<hr>
+
+<div class="row">
+    <div class="col-md-7">
+        <h5>Визиты</h5>
+        {% if encounters %}
+        {% for e in encounters %}
+        <div class="border rounded p-2 mb-2">
+            <b>{{ e.started_at }}</b> — {{ e.get_status_display }} — {{ e.reason|default:"Без причины" }}
+            {% if e.finished_at %}<span class="badge text-bg-secondary ms-2">завершён</span>{% endif %}
+
+            {% if e.notes.all %}
+            <div class="mt-2">
+                <b>Заметки:</b>
+                <ul class="mb-1">
+                    {% for n in e.notes.all %}
+                    <li>{{ n.created_at|date:"d.m.Y H:i" }} — {{ n.text }} <span class="text-muted">({{
+                            n.author.get_full_name|default:n.author.username }})</span></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if e.prescriptions.all %}
+            <div><b>Назначения:</b>
+                <ul class="mb-0">
+                    {% for rx in e.prescriptions.all %}
+                    <li>{{ rx.medication }} — {{ rx.dosage }}, {{ rx.frequency }}, {{ rx.duration_days }} дн. <em
+                            class="text-muted">{{ rx.notes }}</em></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-muted">Пока нет визитов.</p>
+        {% endif %}
+    </div>
+
+    <div class="col-md-5">
+        {% if user.role in "ADMIN DOC NUR" %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Новый визит</h6>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_encounter">
+                    {{ encounter_form.as_p }}
+                    <button class="btn btn-primary w-100">Создать визит</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Добавить заметку</h6>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_note">
+                    {{ note_form.as_p }}
+                    <button class="btn btn-outline-primary w-100">Добавить</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">Добавить назначение</h6>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_rx">
+                    {{ rx_form.as_p }}
+                    <button class="btn btn-outline-success w-100">Добавить</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

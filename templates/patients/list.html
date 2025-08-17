@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Пациенты — MedCRM{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Пациенты</h3>
+    {% if user.role in "ADMIN REG" %}
+    <a class="btn btn-success" href="{% url 'web:patient_create' %}">+ Новый пациент</a>
+    {% endif %}
+</div>
+
+<form class="row g-2 mb-3">
+    <div class="col-auto">
+        <input name="q" class="form-control" placeholder="Поиск: фамилия/имя/телефон" value="{{ request.GET.q }}">
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary">Найти</button>
+    </div>
+</form>
+
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Фамилия</th>
+            <th>Имя</th>
+            <th>ДР</th>
+            <th>Телефон</th>
+            <th>Личный номер</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in object_list %}
+        <tr>
+            <td>{{ p.last_name }}</td>
+            <td>{{ p.first_name }}</td>
+            <td>{{ p.birth_date }}</td>
+            <td>{{ p.phone }}</td>
+            <td>{{p.document_id}}</td>
+            <td><a class="btn btn-sm btn-primary" href="{% url 'web:patient_detail' p.id %}">Открыть</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="text-muted">Ничего не найдено</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if is_paginated %}
+<nav>
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link"
+                href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Назад</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Стр. {{ page_obj.number }} / {{ paginator.num_pages
+                }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link"
+                href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Вперёд</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
