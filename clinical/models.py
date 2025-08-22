@@ -13,6 +13,16 @@ class Encounter(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     reason = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNED)
+    class Meta:
+        verbose_name = "Визит"
+        verbose_name_plural = "Визиты"
+
+    def __str__(self):
+        started = self.started_at.strftime("%Y-%m-%d %H:%M") if self.started_at else "не начат"
+        status = self.get_status_display()
+        return f"Визит {self.id} ({started}, {status}) - {self.patient}"
+        reason = self.reason if self.reason else "без причины"
+        return f"Визит {self.id} ({started}, {status}) - {self.patient} ({reason})"
 
 class Note(models.Model):
     encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="notes")
@@ -39,3 +49,4 @@ class Attachment(models.Model):
     file = models.FileField(upload_to="attachments/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=255, blank=True)
+

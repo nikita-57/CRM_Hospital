@@ -72,6 +72,10 @@ class NoteForm(forms.ModelForm):
     class Meta:
         model = Note
         fields = ["encounter", "text"]
+        labels = {
+            "encounter": "Визит",
+            "text": "Текст заметки",
+        }
         widgets = {
             "encounter": forms.Select(attrs={"class": "form-select"}),
             "text": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Текст заметки"}),
@@ -81,6 +85,14 @@ class PrescriptionForm(forms.ModelForm):
     class Meta:
         model = Prescription
         fields = ["encounter", "medication", "dosage", "frequency", "duration_days", "notes"]
+        labels = {
+            "encounter": "Визит",
+            "medication": "Лекарство",
+            "dosage": "Дозировка",
+            "frequency": "Частота",
+            "duration_days": "Продолжительность (дней)",
+            "notes": "Дополнительные заметки",
+        }
         widgets = {
             "encounter": forms.Select(attrs={"class": "form-select"}),
             "medication": forms.TextInput(attrs={"class": "form-control"}),

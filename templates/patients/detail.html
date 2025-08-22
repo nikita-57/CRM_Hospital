@@ -1,22 +1,43 @@
 {% extends "base.html" %}
 {% block title %}Карточка пациента — MedCRM{% endblock %}
 {% block content %}
-<h3>{{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}</h3>
+
+<div class="d-flex align-items-center justify-content-between">
+    <h3>{{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
+    </h3>
+
+    {% if user.role in "ADMIN DOC NUR" %}
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#encounterModal">
+        + Новый визит
+    </button>
+    {% endif %}
+</div>
+
 <p class="text-muted">ДР: {{ object.birth_date }} • Полис: {{ object.insurance_number }} • Тел.: {{ object.phone }}</p>
 <hr>
 
 <div class="row">
     <div class="col-md-7">
-        <h5>Визиты</h5>
+        <!-- список визитов как было -->
         {% if encounters %}
         {% for e in encounters %}
         <div class="border rounded p-2 mb-2">
-            <b>{{ e.started_at }}</b> — {{ e.get_status_display }} — {{ e.reason|default:"Без причины" }}
-            {% if e.finished_at %}<span class="badge text-bg-secondary ms-2">завершён</span>{% endif %}
+            <b>{{ e.started_at|date:"d.m.Y H:i" }}</b> — {{ e.get_status_display }} — {{ e.reason|default:"Без причины"
+            }}
+            {% if not e.finished_at and user.role in "ADMIN DOC NUR" %}
+            <form method="post" class="d-inline ms-2">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="close_encounter">
+                <input type="hidden" name="encounter_id" value="{{ e.id }}">
+                <button class="btn btn-sm btn-outline-secondary">Закрыть визит</button>
+            </form>
+            {% endif %}
+            {% if e.finished_at %}
+            <span class="badge text-bg-secondary ms-2">завершён {{ e.finished_at|date:"d.m.Y H:i" }}</span>
+            {% endif %}
 
             {% if e.notes.all %}
-            <div class="mt-2">
-                <b>Заметки:</b>
+            <div class="mt-2"><b>Заметки:</b>
                 <ul class="mb-1">
                     {% for n in e.notes.all %}
                     <li>{{ n.created_at|date:"d.m.Y H:i" }} — {{ n.text }} <span class="text-muted">({{
@@ -36,6 +57,17 @@
                 </ul>
             </div>
             {% endif %}
+
+            {% if e.attachments.all %}
+            <div class="mt-2"><b>Файлы:</b>
+                <ul class="mb-0">
+                    {% for a in e.attachments.all %}
+                    <li><a href="{{ a.file.url }}" target="_blank">{{ a.title|default:a.file.name }}</a> <span
+                            class="text-muted">({{ a.uploaded_at|date:"d.m.Y H:i" }})</span></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
         {% else %}
@@ -44,19 +76,8 @@
     </div>
 
     <div class="col-md-5">
+        <!-- здесь оставь формы заметок/назначений/вложений как было -->
         {% if user.role in "ADMIN DOC NUR" %}
-        <div class="card mb-3">
-            <div class="card-body">
-                <h6 class="card-title">Новый визит</h6>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_encounter">
-                    {{ encounter_form.as_p }}
-                    <button class="btn btn-primary w-100">Создать визит</button>
-                </form>
-            </div>
-        </div>
-
         <div class="card mb-3">
             <div class="card-body">
                 <h6 class="card-title">Добавить заметку</h6>
@@ -83,4 +104,67 @@
         {% endif %}
     </div>
 </div>
+
+{% if user.role in "ADMIN DOC NUR" %}
+<!-- MODAL: Добавить визит -->
+<div class="modal fade" id="encounterModal" tabindex="-1" aria-labelledby="encounterModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="encounterModalLabel">Новый визит</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_encounter">
+                    {{ encounter_form.as_p }}
+                    {% if encounter_form.errors %}
+                    <div class="alert alert-danger mt-2 mb-0">
+                        Проверьте поля формы.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button class="btn btn-primary">Создать визит</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // если сервер сказал «нужно открыть модалку» (ошибка валидации) — откроем её
+    {% if open_modal == "encounter" %}
+    const showEncounter = () => {
+        const m = new bootstrap.Modal(document.getElementById('encounterModal'));
+        m.show();
+    };
+    if (document.readyState === 'complete') showEncounter();
+    else document.addEventListener('DOMContentLoaded', showEncounter);
+    {% endif %}
+
+    // Инициализируем flatpickr внутри модалки при открытии (на случай динамики)
+    const encModalEl = document.getElementById('encounterModal');
+    if (encModalEl) {
+        encModalEl.addEventListener('shown.bs.modal', () => {
+            document.querySelectorAll('#encounterModal .js-datetime').forEach(el => {
+                if (!el._fp) {
+                    flatpickr(el, {
+                        enableTime: true,
+                        time_24hr: true,
+                        dateFormat: 'Y-m-d H:i',
+                        allowInput: true,
+                        locale: 'ru'
+                    });
+                }
+            });
+        });
+    }
+</script>
 {% endblock %}

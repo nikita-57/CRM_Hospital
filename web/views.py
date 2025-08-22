@@ -67,7 +67,10 @@ class PatientDetail(RoleRequiredMixin, DetailView):
             else:
                 messages.error(request, f"Ошибка: {form.errors}")
             return redirect(self.request.path)
-
+            context = self.get_context_data()
+            context["encounter_form"] = form
+            context["open_madal"] = "encounter"
+            return self.render_to_response(context)
         if action == "add_note":
             if request.user.role not in {"ADMIN","DOC","NUR"}:
                 messages.error(request, "Нет прав добавлять заметки.")
