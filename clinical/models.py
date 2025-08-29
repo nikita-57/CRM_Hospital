@@ -7,22 +7,24 @@ class Encounter(models.Model):
         PLANNED="PLANNED","Запланирован"
         INPROGRESS="INPROGRESS","В процессе"
         FINISHED="FINISHED","Завершен"
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="encounters")
-    doctor  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="encounters")
-    started_at = models.DateTimeField()
-    finished_at = models.DateTimeField(null=True, blank=True)
-    reason = models.CharField(max_length=255, blank=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNED)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="encounters", verbose_name="Пациент")
+    doctor  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="encounters", verbose_name="Врач")
+    started_at = models.DateTimeField(verbose_name="Начало визита")
+    finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Окончание визита")
+    reason = models.CharField(max_length=255, blank=True, verbose_name="Причина визита")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNED, verbose_name="Статус")
     class Meta:
         verbose_name = "Визит"
         verbose_name_plural = "Визиты"
+        ordering = ["-started_at"]
 
     def __str__(self):
         started = self.started_at.strftime("%Y-%m-%d %H:%M") if self.started_at else "не начат"
         status = self.get_status_display()
-        return f"Визит {self.id} ({started}, {status}) - {self.patient}"
         reason = self.reason if self.reason else "без причины"
-        return f"Визит {self.id} ({started}, {status}) - {self.patient} ({reason})"
+        return f"Визит {self.id} ({started}, {status}) - {self.patient}"
+        
+        
 
 class Note(models.Model):
     encounter = models.ForeignKey(Encounter, on_delete=models.CASCADE, related_name="notes")

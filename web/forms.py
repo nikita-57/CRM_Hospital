@@ -60,13 +60,17 @@ class EncounterForm(forms.ModelForm):
             ),
             "patient": forms.Select(attrs={"class": "form-select"}),
             "doctor": forms.Select(attrs={"class": "form-select"}),
-            "reason": forms.TextInput(attrs={"class": "form-control"}),
+            "reason": forms.TextInput(attrs={"class": "form-control", "placeholder": "Причина визита"}),
             "status": forms.Select(attrs={"class": "form-select"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["started_at"].input_formats = ["%Y-%m-%d %H:%M"]
+        if self.initial.get('patient'):
+            self.fields['patient'].widget = forms.HiddenInput()
+        if self.initial.get('doctor'):
+            self.fields['doctor'].widget = forms.HiddenInput()
 
 class NoteForm(forms.ModelForm):
     class Meta:

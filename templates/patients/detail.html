@@ -3,7 +3,8 @@
 {% block content %}
 
 <div class="d-flex align-items-center justify-content-between">
-    <h3>{{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
+    <h3>
+        {{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
     </h3>
 
     {% if user.role in "ADMIN DOC NUR" %}
@@ -13,17 +14,24 @@
     {% endif %}
 </div>
 
-<p class="text-muted">ДР: {{ object.birth_date }} • Полис: {{ object.insurance_number }} • Тел.: {{ object.phone }}</p>
+<p class="text-muted">
+    ДР: {{ object.birth_date }} • Полис: {{ object.insurance_number }} • Тел.: {{ object.phone }}
+</p>
 <hr>
 
 <div class="row">
     <div class="col-md-7">
-        <!-- список визитов как было -->
         {% if encounters %}
         {% for e in encounters %}
         <div class="border rounded p-2 mb-2">
-            <b>{{ e.started_at|date:"d.m.Y H:i" }}</b> — {{ e.get_status_display }} — {{ e.reason|default:"Без причины"
-            }}
+            <b>{{ e.started_at|date:"d.m.Y H:i" }}</b> — {{ e.get_status_display }}
+            {% if e.reason %}
+            — {{ e.reason }}
+            {% else %}
+            — Без причины
+            {% endif %}
+
+
             {% if not e.finished_at and user.role in "ADMIN DOC NUR" %}
             <form method="post" class="d-inline ms-2">
                 {% csrf_token %}
@@ -32,38 +40,50 @@
                 <button class="btn btn-sm btn-outline-secondary">Закрыть визит</button>
             </form>
             {% endif %}
+
             {% if e.finished_at %}
-            <span class="badge text-bg-secondary ms-2">завершён {{ e.finished_at|date:"d.m.Y H:i" }}</span>
+            <span class="badge text-bg-secondary ms-2">
+                завершён {{ e.finished_at|date:"d.m.Y H:i" }}
+            </span>
             {% endif %}
 
             {% if e.notes.all %}
-            <div class="mt-2"><b>Заметки:</b>
+            <div class="mt-2">
+                <b>Заметки:</b>
                 <ul class="mb-1">
                     {% for n in e.notes.all %}
-                    <li>{{ n.created_at|date:"d.m.Y H:i" }} — {{ n.text }} <span class="text-muted">({{
-                            n.author.get_full_name|default:n.author.username }})</span></li>
+                    <li>
+                        {{ n.created_at|date:"d.m.Y H:i" }} — {{ n.text }}
+                        <span class="text-muted">({{ n.author.get_full_name|default:n.author.username }})</span>
+                    </li>
                     {% endfor %}
                 </ul>
             </div>
             {% endif %}
 
             {% if e.prescriptions.all %}
-            <div><b>Назначения:</b>
+            <div>
+                <b>Назначения:</b>
                 <ul class="mb-0">
                     {% for rx in e.prescriptions.all %}
-                    <li>{{ rx.medication }} — {{ rx.dosage }}, {{ rx.frequency }}, {{ rx.duration_days }} дн. <em
-                            class="text-muted">{{ rx.notes }}</em></li>
+                    <li>
+                        {{ rx.medication }} — {{ rx.dosage }}, {{ rx.frequency }}, {{ rx.duration_days }} дн.
+                        <em class="text-muted">{{ rx.notes }}</em>
+                    </li>
                     {% endfor %}
                 </ul>
             </div>
             {% endif %}
 
             {% if e.attachments.all %}
-            <div class="mt-2"><b>Файлы:</b>
+            <div class="mt-2">
+                <b>Файлы:</b>
                 <ul class="mb-0">
                     {% for a in e.attachments.all %}
-                    <li><a href="{{ a.file.url }}" target="_blank">{{ a.title|default:a.file.name }}</a> <span
-                            class="text-muted">({{ a.uploaded_at|date:"d.m.Y H:i" }})</span></li>
+                    <li>
+                        <a href="{{ a.file.url }}" target="_blank">{{ a.title|default:a.file.name }}</a>
+                        <span class="text-muted">({{ a.uploaded_at|date:"d.m.Y H:i" }})</span>
+                    </li>
                     {% endfor %}
                 </ul>
             </div>
@@ -76,7 +96,6 @@
     </div>
 
     <div class="col-md-5">
-        <!-- здесь оставь формы заметок/назначений/вложений как было -->
         {% if user.role in "ADMIN DOC NUR" %}
         <div class="card mb-3">
             <div class="card-body">
@@ -115,16 +134,56 @@
                     <h5 class="modal-title" id="encounterModalLabel">Новый визит</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
                 </div>
+
                 <div class="modal-body">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_encounter">
-                    {{ encounter_form.as_p }}
-                    {% if encounter_form.errors %}
-                    <div class="alert alert-danger mt-2 mb-0">
-                        Проверьте поля формы.
+
+                    {# скрытые реальные значения #}
+                    {{ encounter_form.patient }}
+                    {{ encounter_form.doctor }}
+
+                    <div class="mb-3">
+                        <label class="form-label">Пациент</label>
+                        <input class="form-control"
+                            value="{{ object.last_name }} {{ object.first_name }} ({{ object.birth_date }})" disabled>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Врач</label>
+                        <input class="form-control"
+                            value="{{ request.user.get_full_name|default:request.user.username }}" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ encounter_form.started_at.label_tag }}
+                        {{ encounter_form.started_at }}
+                        {% for e in encounter_form.started_at.errors %}
+                        <div class="text-danger small">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ encounter_form.reason.label_tag }}
+                        {{ encounter_form.reason }}
+                        {% for e in encounter_form.reason.errors %}
+                        <div class="text-danger small">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-0">
+                        {{ encounter_form.status.label_tag }}
+                        {{ encounter_form.status }}
+                        {% for e in encounter_form.status.errors %}
+                        <div class="text-danger small">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {% if encounter_form.non_field_errors %}
+                    <div class="alert alert-danger mt-2 mb-0">{{ encounter_form.non_field_errors }}</div>
                     {% endif %}
                 </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
                     <button class="btn btn-primary">Создать визит</button>
@@ -138,33 +197,38 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-    // если сервер сказал «нужно открыть модалку» (ошибка валидации) — откроем её
-    {% if open_modal == "encounter" %}
+  {# открыть модалку заново при невалидной форме #}
+  {% if open_modal == 'encounter' %}
+  <script>
     const showEncounter = () => {
-        const m = new bootstrap.Modal(document.getElementById('encounterModal'));
-        m.show();
+      const m = new bootstrap.Modal(document.getElementById('encounterModal'));
+      m.show();
     };
-    if (document.readyState === 'complete') showEncounter();
-    else document.addEventListener('DOMContentLoaded', showEncounter);
-    {% endif %}
+    if (document.readyState === 'complete') {
+      showEncounter();
+    } else {
+      document.addEventListener('DOMContentLoaded', showEncounter);
+    }
+  </script>
+  {% endif %}
 
-    // Инициализируем flatpickr внутри модалки при открытии (на случай динамики)
+  {# инициализация flatpickr внутри модалки при открытии #}
+  <script>
     const encModalEl = document.getElementById('encounterModal');
     if (encModalEl) {
-        encModalEl.addEventListener('shown.bs.modal', () => {
-            document.querySelectorAll('#encounterModal .js-datetime').forEach(el => {
-                if (!el._fp) {
-                    flatpickr(el, {
-                        enableTime: true,
-                        time_24hr: true,
-                        dateFormat: 'Y-m-d H:i',
-                        allowInput: true,
-                        locale: 'ru'
-                    });
-                }
+      encModalEl.addEventListener('shown.bs.modal', () => {
+        document.querySelectorAll('#encounterModal .js-datetime').forEach(el => {
+          if (!el._fp) {
+            flatpickr(el, {
+              enableTime: true,
+              time_24hr: true,
+              dateFormat: 'Y-m-d H:i',
+              allowInput: true,
+              locale: 'ru'
             });
+          }
         });
+      });
     }
-</script>
+  </script>
 {% endblock %}
