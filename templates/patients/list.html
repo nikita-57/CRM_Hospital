@@ -3,7 +3,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Пациенты</h3>
-    {% if user.role in "ADMIN REG" %}
+    {% if user.role in "ADMIN REG DOC" %}
     <a class="btn btn-success" href="{% url 'web:patient_create' %}">+ Новый пациент</a>
     {% endif %}
 </div>
