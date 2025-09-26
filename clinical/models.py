@@ -7,8 +7,8 @@ class Encounter(models.Model):
         PLANNED="PLANNED","Запланирован"
         INPROGRESS="INPROGRESS","В процессе"
         FINISHED="FINISHED","Завершен"
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="encounters", verbose_name="Пациент")
-    doctor  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="encounters", verbose_name="Врач")
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="encounters")
+    doctor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="encounters")
     started_at = models.DateTimeField(verbose_name="Начало визита")
     finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Окончание визита")
     reason = models.CharField(max_length=255, blank=True, verbose_name="Причина визита")

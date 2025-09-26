@@ -23,7 +23,18 @@ class PatientList(RoleRequiredMixin, ListView):
     allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
 
     def get_queryset(self):
+        """
+        ADMIN и REG видят всех пациентов,
+        DOC — только своих пациентов,
+        NUR — только своих пациентов (если такая логика нужна).
+        """
         qs = super().get_queryset()
+
+        user = self.request.user
+
+        if user.role == "DOC":
+            qs = qs.filter(encounters__doctor=user).distinct()
+
         q = (self.request.GET.get("q") or "").strip()
         if q:
             qs = qs.filter(
@@ -33,6 +44,7 @@ class PatientList(RoleRequiredMixin, ListView):
                 Q(document_id__icontains=q) |
                 Q(insurance_number__icontains=q)
             )
+
         return qs
 
 
