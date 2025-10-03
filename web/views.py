@@ -5,6 +5,8 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q, Prefetch
 from django.utils import timezone
+from django.views.generic import UpdateView
+from django.urls import reverse
 
 from .mixins import RoleRequiredMixin
 from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm
@@ -187,3 +189,21 @@ class PatientDetail(RoleRequiredMixin, DetailView):
 
         # неизвестное действие
         return redirect(self.request.path)
+
+class PatientUpdate(RoleRequiredMixin, UpdateView):
+    model = Patient
+    form_class = PatientForm
+    template_name = "patients/update.html"
+    allowed_roles = {"REG"}
+
+    def get_success_url(self):
+        return reverse("web:patient_detail", args=[self.object.id])
+
+class AdultPatientList(PatientList):
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return [p for p in qs if not p.is_child]
+class ChildrenPatients(PatientList):
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return [p for p in qs if p.is_child]

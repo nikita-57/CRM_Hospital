@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Редактирование пациента — MedCRM{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Редактирование пациента</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-success">Сохранить</button>
+        <a href="{% url 'web:patient_detail' object.id %}" class="btn btn-secondary">Отмена</a>
+    </form>
+</div>
+{% endblock %}

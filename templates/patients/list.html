@@ -8,6 +8,15 @@
     {% endif %}
 </div>
 
+<div class="mb-3">
+    <a class="btn btn-outline-primary {% if request.path == '/patients/adults/' %}active{% endif %}"
+        href="{% url 'web:patients_adults' %}">Взрослые</a>
+    <a class="btn btn-outline-primary {% if request.path == '/patients/children/' %}active{% endif %}"
+        href="{% url 'web:patients_children' %}">Дети</a>
+    <a class="btn btn-outline-primary {% if request.path == '/patients/' %}active{% endif %}"
+        href="{% url 'web:patients' %}">Все</a>
+</div>
+
 <form class="row g-2 mb-3">
     <div class="col-auto">
         <input name="q" class="form-control" placeholder="Поиск: фамилия/имя/телефон" value="{{ request.GET.q }}">
@@ -22,7 +31,8 @@
         <tr>
             <th>Фамилия</th>
             <th>Имя</th>
-            <th>ДР</th>
+            <th>Дата рождения</th>
+            <th>Возраст</th>
             <th>Телефон</th>
             <th>Личный номер</th>
             <th></th>
@@ -33,14 +43,15 @@
         <tr>
             <td>{{ p.last_name }}</td>
             <td>{{ p.first_name }}</td>
-            <td>{{ p.birth_date }}</td>
+            <td>{{ p.birth_date|date:"d.m.Y" }}</td>
+            <td>{% if p.age %}{{ p.age }} лет{% else %}—{% endif %}</td>
             <td>{{ p.phone }}</td>
-            <td>{{p.document_id}}</td>
+            <td>{{ p.document_id }}</td>
             <td><a class="btn btn-sm btn-primary" href="{% url 'web:patient_detail' p.id %}">Открыть</a></td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="5" class="text-muted">Ничего не найдено</td>
+            <td colspan="7" class="text-muted">Ничего не найдено</td>
         </tr>
         {% endfor %}
     </tbody>

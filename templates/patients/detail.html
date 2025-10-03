@@ -2,7 +2,7 @@
 {% block title %}Карточка пациента — MedCRM{% endblock %}
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between">
+<div class="d-flex align-items-center justify-content-between mb-2">
     <h3>
         {{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
     </h3>
@@ -14,9 +14,21 @@
     {% endif %}
 </div>
 
+{% if user.role == "REG" %}
+<a href="{% url 'web:patient_update' object.id %}" class="btn btn-warning mb-3">✏ Редактировать</a>
+{% endif %}
+
 <p class="text-muted">
-    ДР: {{ object.birth_date }} • Полис: {{ object.insurance_number }} • Тел.: {{ object.phone }}
+    ДР: {{ object.birth_date|date:"d.m.Y" }}
+    {% if object.age %}
+    ({{ object.age }} лет
+    {% if object.is_child %}<span class="badge bg-info text-dark">ребёнок</span>{% else %}
+    <span class="badge bg-secondary">взрослый</span>{% endif %})
+    {% endif %}
+    • Полис: {{ object.insurance_number }}
+    • Тел.: {{ object.phone }}
 </p>
+
 <hr>
 
 <div class="row">
@@ -30,7 +42,6 @@
             {% else %}
             — Без причины
             {% endif %}
-
 
             {% if not e.finished_at and user.role in "ADMIN DOC NUR" %}
             <form method="post" class="d-inline ms-2">
@@ -103,7 +114,16 @@
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_note">
-                    {{ note_form.as_p }}
+
+                    <div class="mb-3">
+                        {{ note_form.encounter.label_tag }}
+                        {{ note_form.encounter }}
+                    </div>
+                    <div class="mb-3">
+                        {{ note_form.text.label_tag }}
+                        {{ note_form.text }}
+                    </div>
+
                     <button class="btn btn-outline-primary w-100">Добавить</button>
                 </form>
             </div>
@@ -115,7 +135,32 @@
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_rx">
-                    {{ rx_form.as_p }}
+
+                    <div class="mb-3">
+                        {{ rx_form.encounter.label_tag }}
+                        {{ rx_form.encounter }}
+                    </div>
+                    <div class="mb-3">
+                        {{ rx_form.medication.label_tag }}
+                        {{ rx_form.medication }}
+                    </div>
+                    <div class="mb-3">
+                        {{ rx_form.dosage.label_tag }}
+                        {{ rx_form.dosage }}
+                    </div>
+                    <div class="mb-3">
+                        {{ rx_form.frequency.label_tag }}
+                        {{ rx_form.frequency }}
+                    </div>
+                    <div class="mb-3">
+                        {{ rx_form.duration_days.label_tag }}
+                        {{ rx_form.duration_days }}
+                    </div>
+                    <div class="mb-3">
+                        {{ rx_form.notes.label_tag }}
+                        {{ rx_form.notes }}
+                    </div>
+
                     <button class="btn btn-outline-success w-100">Добавить</button>
                 </form>
             </div>
@@ -139,7 +184,6 @@
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_encounter">
 
-                    {# скрытые реальные значения #}
                     {{ encounter_form.patient }}
                     {{ encounter_form.doctor }}
 
@@ -197,38 +241,36 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  {# открыть модалку заново при невалидной форме #}
-  {% if open_modal == 'encounter' %}
-  <script>
+{% if open_modal == 'encounter' %}
+<script>
     const showEncounter = () => {
-      const m = new bootstrap.Modal(document.getElementById('encounterModal'));
-      m.show();
+        const m = new bootstrap.Modal(document.getElementById('encounterModal'));
+        m.show();
     };
     if (document.readyState === 'complete') {
-      showEncounter();
+        showEncounter();
     } else {
-      document.addEventListener('DOMContentLoaded', showEncounter);
+        document.addEventListener('DOMContentLoaded', showEncounter);
     }
-  </script>
-  {% endif %}
+</script>
+{% endif %}
 
-  {# инициализация flatpickr внутри модалки при открытии #}
-  <script>
+<script>
     const encModalEl = document.getElementById('encounterModal');
     if (encModalEl) {
-      encModalEl.addEventListener('shown.bs.modal', () => {
-        document.querySelectorAll('#encounterModal .js-datetime').forEach(el => {
-          if (!el._fp) {
-            flatpickr(el, {
-              enableTime: true,
-              time_24hr: true,
-              dateFormat: 'Y-m-d H:i',
-              allowInput: true,
-              locale: 'ru'
+        encModalEl.addEventListener('shown.bs.modal', () => {
+            document.querySelectorAll('#encounterModal .js-datetime').forEach(el => {
+                if (!el._fp) {
+                    flatpickr(el, {
+                        enableTime: true,
+                        time_24hr: true,
+                        dateFormat: 'Y-m-d H:i',
+                        allowInput: true,
+                        locale: 'ru'
+                    });
+                }
             });
-          }
         });
-      });
     }
-  </script>
+</script>
 {% endblock %}
