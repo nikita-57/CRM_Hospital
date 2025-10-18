@@ -9,7 +9,7 @@ class PatientForm(forms.ModelForm):
         model = Patient
         fields = [
             "last_name", "first_name", "middle_name",
-            "birth_date", "gender",
+            "birth_date", "gender","patient_type",
             "phone", "email",
             "document_id", "insurance_number",
             "address", "emergency_contact",
@@ -21,6 +21,7 @@ class PatientForm(forms.ModelForm):
                     "class": "form-control js-date",
                     "placeholder": "ГГГГ-ММ-ДД",
                     "data-max": date.today().isoformat(),
+                    "patient_type": forms.Select(attrs={"class": "form-select"}),
                 }
             ),
             "phone": forms.TextInput(

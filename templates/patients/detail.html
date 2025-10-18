@@ -18,15 +18,23 @@
 <a href="{% url 'web:patient_update' object.id %}" class="btn btn-warning mb-3">✏ Редактировать</a>
 {% endif %}
 
-<p class="text-muted">
+<p class="text-muted mb-1">
     ДР: {{ object.birth_date|date:"d.m.Y" }}
     {% if object.age %}
-    ({{ object.age }} лет
-    {% if object.is_child %}<span class="badge bg-info text-dark">ребёнок</span>{% else %}
-    <span class="badge bg-secondary">взрослый</span>{% endif %})
+    ({{ object.age }} лет)
     {% endif %}
-    • Полис: {{ object.insurance_number }}
-    • Тел.: {{ object.phone }}
+    •
+    {% if object.patient_type == "child" %}
+    <span class="badge bg-info text-dark">Ребёнок</span>
+    {% else %}
+    <span class="badge bg-secondary">Взрослый</span>
+    {% endif %}
+</p>
+
+<p class="text-muted">
+    Полис: {{ object.insurance_number|default:"—" }} •
+    Тел.: {{ object.phone|default:"—" }} •
+    Email: {{ object.email|default:"—" }}
 </p>
 
 <hr>
@@ -114,16 +122,7 @@
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_note">
-
-                    <div class="mb-3">
-                        {{ note_form.encounter.label_tag }}
-                        {{ note_form.encounter }}
-                    </div>
-                    <div class="mb-3">
-                        {{ note_form.text.label_tag }}
-                        {{ note_form.text }}
-                    </div>
-
+                    {{ note_form.as_p }}
                     <button class="btn btn-outline-primary w-100">Добавить</button>
                 </form>
             </div>
@@ -135,32 +134,7 @@
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_rx">
-
-                    <div class="mb-3">
-                        {{ rx_form.encounter.label_tag }}
-                        {{ rx_form.encounter }}
-                    </div>
-                    <div class="mb-3">
-                        {{ rx_form.medication.label_tag }}
-                        {{ rx_form.medication }}
-                    </div>
-                    <div class="mb-3">
-                        {{ rx_form.dosage.label_tag }}
-                        {{ rx_form.dosage }}
-                    </div>
-                    <div class="mb-3">
-                        {{ rx_form.frequency.label_tag }}
-                        {{ rx_form.frequency }}
-                    </div>
-                    <div class="mb-3">
-                        {{ rx_form.duration_days.label_tag }}
-                        {{ rx_form.duration_days }}
-                    </div>
-                    <div class="mb-3">
-                        {{ rx_form.notes.label_tag }}
-                        {{ rx_form.notes }}
-                    </div>
-
+                    {{ rx_form.as_p }}
                     <button class="btn btn-outline-success w-100">Добавить</button>
                 </form>
             </div>
@@ -183,14 +157,14 @@
                 <div class="modal-body">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_encounter">
-
                     {{ encounter_form.patient }}
                     {{ encounter_form.doctor }}
 
                     <div class="mb-3">
                         <label class="form-label">Пациент</label>
                         <input class="form-control"
-                            value="{{ object.last_name }} {{ object.first_name }} ({{ object.birth_date }})" disabled>
+                            value="{{ object.last_name }} {{ object.first_name }} ({{ object.birth_date|date:'d.m.Y' }})"
+                            disabled>
                     </div>
 
                     <div class="mb-3">
@@ -202,30 +176,17 @@
                     <div class="mb-3">
                         {{ encounter_form.started_at.label_tag }}
                         {{ encounter_form.started_at }}
-                        {% for e in encounter_form.started_at.errors %}
-                        <div class="text-danger small">{{ e }}</div>
-                        {% endfor %}
                     </div>
 
                     <div class="mb-3">
                         {{ encounter_form.reason.label_tag }}
                         {{ encounter_form.reason }}
-                        {% for e in encounter_form.reason.errors %}
-                        <div class="text-danger small">{{ e }}</div>
-                        {% endfor %}
                     </div>
 
                     <div class="mb-0">
                         {{ encounter_form.status.label_tag }}
                         {{ encounter_form.status }}
-                        {% for e in encounter_form.status.errors %}
-                        <div class="text-danger small">{{ e }}</div>
-                        {% endfor %}
                     </div>
-
-                    {% if encounter_form.non_field_errors %}
-                    <div class="alert alert-danger mt-2 mb-0">{{ encounter_form.non_field_errors }}</div>
-                    {% endif %}
                 </div>
 
                 <div class="modal-footer">
@@ -247,14 +208,10 @@
         const m = new bootstrap.Modal(document.getElementById('encounterModal'));
         m.show();
     };
-    if (document.readyState === 'complete') {
-        showEncounter();
-    } else {
-        document.addEventListener('DOMContentLoaded', showEncounter);
-    }
+    if (document.readyState === 'complete') showEncounter();
+    else document.addEventListener('DOMContentLoaded', showEncounter);
 </script>
 {% endif %}
-
 <script>
     const encModalEl = document.getElementById('encounterModal');
     if (encModalEl) {

@@ -1,4 +1,5 @@
 # web/views.py
+from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -7,33 +8,29 @@ from django.db.models import Q, Prefetch
 from django.utils import timezone
 from django.views.generic import UpdateView
 from django.urls import reverse
-
-from .mixins import RoleRequiredMixin
+from django.shortcuts import get_object_or_404
 from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm
 from patients.models import Patient
 from clinical.models import Encounter, Note, Prescription
+from .mixins import RoleRequiredMixin, PatientFilterMixin
 
 
 class Dashboard(RoleRequiredMixin, TemplateView):
     template_name = "dashboard.html"
 
 
-class PatientList(RoleRequiredMixin, ListView):
+# web/views.py
+class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
     model = Patient
     template_name = "patients/list.html"
     paginate_by = 20
     allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
 
     def get_queryset(self):
-        """
-        ADMIN и REG видят всех пациентов,
-        DOC — только своих пациентов,
-        NUR — только своих пациентов (если такая логика нужна).
-        """
         qs = super().get_queryset()
 
+        qs = self.apply_filters(qs)
         user = self.request.user
-
         if user.role == "DOC":
             qs = qs.filter(encounters__doctor=user).distinct()
 
@@ -48,6 +45,7 @@ class PatientList(RoleRequiredMixin, ListView):
             )
 
         return qs
+
 
 
 class PatientCreate(RoleRequiredMixin, CreateView):
@@ -202,8 +200,19 @@ class PatientUpdate(RoleRequiredMixin, UpdateView):
 class AdultPatientList(PatientList):
     def get_queryset(self):
         qs = super().get_queryset()
-        return [p for p in qs if not p.is_child]
+        return qs.filter(patient_type="adult")
 class ChildrenPatients(PatientList):
     def get_queryset(self):
         qs = super().get_queryset()
-        return [p for p in qs if p.is_child]
+        return qs.filter(patient_type="child")
+
+class PatientSoftDelete(RoleRequiredMixin, View):
+    def post(self, request, pk):
+        if request.user.role != "REG":
+            messages.error(request, "Нет прав удалять пациента.")
+            return redirect("web:patients")
+        patient = get_object_or_404(Patient, pk=pk)
+        patient.is_active = False
+        patient.save()
+        messages.success(request, "Пациент успешно удален.")
+        return redirect("web:patients")
