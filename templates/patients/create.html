@@ -1,10 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Новый пациент — MedCRM{% endblock %}
 {% block content %}
+
 <h3>Новый пациент</h3>
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-success">Сохранить</button>
+    <div class="row mb-2">
+        <div class="col-md-4">{{ form.last_name.label_tag }} {{ form.last_name }}</div>
+        <div class="col-md-4">{{ form.first_name.label_tag }} {{ form.first_name }}</div>
+        <div class="col-md-4">{{ form.middle_name.label_tag }} {{ form.middle_name }}</div>
+    </div>
+
+    <div class="row mb-2">
+        <div class="col-md-4">{{ form.birth_date.label_tag }} {{ form.birth_date }}</div>
+        <div class="col-md-4">{{ form.gender.label_tag }} {{ form.gender }}</div>
+        <div class="col-md-4">{{ form.patient_type.label_tag }} {{ form.patient_type }}</div>
+    </div>
+
+    <div class="row mb-2">
+        <div class="col-md-6">{{ form.phone.label_tag }} {{ form.phone }}</div>
+        <div class="col-md-6">{{ form.insurance_number.label_tag }} {{ form.insurance_number }}</div>
+    </div>
+
+    <div class="row mb-2">
+        <div class="col-md-12">{{ form.document_id.label_tag }} {{ form.document_id }}</div>
+    </div>
+
+    <div class="row mb-2">
+        <div class="col-md-12">{{ form.department.label_tag }} {{ form.department }}</div>
+    </div>
+
+    <button class="btn btn-success mt-2" type="submit">Сохранить</button>
+    <a class="btn btn-secondary mt-2" href="{% url 'web:patients' %}">Отмена</a>
 </form>
+
 {% endblock %}

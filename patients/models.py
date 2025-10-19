@@ -1,5 +1,6 @@
 from django.db import models
 from datetime import date
+from accounts.models import DEPARTMENTS
 
 class Patient(models.Model):
     GENDER_CHOICES = [
@@ -26,6 +27,12 @@ class Patient(models.Model):
     email = models.EmailField("Email", blank=True)
     document_id = models.CharField("Личный номер", max_length=64, blank=True)
     insurance_number = models.CharField("Полис", max_length=64, blank=True)
+    department = models.CharField(
+        "Отделение",
+        max_length=20,
+        choices=DEPARTMENTS,
+        default="therapy",
+    )
     address = models.CharField("Адрес", max_length=255, blank=True)
     emergency_contact = models.CharField("Контакт для связи", max_length=255, blank=True)
     is_active = models.BooleanField("Активен", default=True)

@@ -2,15 +2,22 @@
 {% block title %}Карточка пациента — MedCRM{% endblock %}
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between mb-2">
-    <h3>
-        {{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'web:patients' %}">Пациенты</a></li>
+        <li class="breadcrumb-item">{{ object.get_department_display }}</li>
+        <li class="breadcrumb-item active" aria-current="page">
+            {{ object.last_name }} {{ object.first_name }}
+        </li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h3>{{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
     </h3>
 
     {% if user.role in "ADMIN DOC NUR" %}
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#encounterModal">
-        + Новый визит
-    </button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#encounterModal">+ Новый визит</button>
     {% endif %}
 </div>
 
@@ -18,24 +25,46 @@
 <a href="{% url 'web:patient_update' object.id %}" class="btn btn-warning mb-3">✏ Редактировать</a>
 {% endif %}
 
-<p class="text-muted mb-1">
-    ДР: {{ object.birth_date|date:"d.m.Y" }}
-    {% if object.age %}
-    ({{ object.age }} лет)
-    {% endif %}
-    •
-    {% if object.patient_type == "child" %}
-    <span class="badge bg-info text-dark">Ребёнок</span>
-    {% else %}
-    <span class="badge bg-secondary">Взрослый</span>
-    {% endif %}
-</p>
-
-<p class="text-muted">
-    Полис: {{ object.insurance_number|default:"—" }} •
-    Тел.: {{ object.phone|default:"—" }} •
-    Email: {{ object.email|default:"—" }}
-</p>
+<table class="table table-bordered">
+    <tbody>
+        <tr>
+            <th>Статус</th>
+            <td>
+                {% if object.is_active %}
+                <span class="badge bg-success">Активен</span>
+                {% else %}
+                <span class="badge bg-secondary">Скрыт</span>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Отделение</th>
+            <td>{{ object.get_department_display }}</td>
+        </tr>
+        <tr>
+            <th>Тип пациента</th>
+            <td>
+                {% if object.patient_type == "child" %}
+                Ребёнок
+                {% else %}
+                Взрослый
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Дата рождения</th>
+            <td>{{ object.birth_date|date:"d.m.Y" }} ({{ object.age }} лет)</td>
+        </tr>
+        <tr>
+            <th>Телефон</th>
+            <td>{{ object.phone|default:"—" }}</td>
+        </tr>
+        <tr>
+            <th>Полис</th>
+            <td>{{ object.insurance_number|default:"—" }}</td>
+        </tr>
+    </tbody>
+</table>
 
 <hr>
 
@@ -45,11 +74,7 @@
         {% for e in encounters %}
         <div class="border rounded p-2 mb-2">
             <b>{{ e.started_at|date:"d.m.Y H:i" }}</b> — {{ e.get_status_display }}
-            {% if e.reason %}
-            — {{ e.reason }}
-            {% else %}
-            — Без причины
-            {% endif %}
+            {% if e.reason %} — {{ e.reason }}{% endif %}
 
             {% if not e.finished_at and user.role in "ADMIN DOC NUR" %}
             <form method="post" class="d-inline ms-2">
@@ -60,21 +85,12 @@
             </form>
             {% endif %}
 
-            {% if e.finished_at %}
-            <span class="badge text-bg-secondary ms-2">
-                завершён {{ e.finished_at|date:"d.m.Y H:i" }}
-            </span>
-            {% endif %}
-
             {% if e.notes.all %}
             <div class="mt-2">
                 <b>Заметки:</b>
                 <ul class="mb-1">
                     {% for n in e.notes.all %}
-                    <li>
-                        {{ n.created_at|date:"d.m.Y H:i" }} — {{ n.text }}
-                        <span class="text-muted">({{ n.author.get_full_name|default:n.author.username }})</span>
-                    </li>
+                    <li>{{ n.created_at|date:"d.m.Y H:i" }} — {{ n.text }}</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -83,26 +99,9 @@
             {% if e.prescriptions.all %}
             <div>
                 <b>Назначения:</b>
-                <ul class="mb-0">
+                <ul class="mb-1">
                     {% for rx in e.prescriptions.all %}
-                    <li>
-                        {{ rx.medication }} — {{ rx.dosage }}, {{ rx.frequency }}, {{ rx.duration_days }} дн.
-                        <em class="text-muted">{{ rx.notes }}</em>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
-            {% if e.attachments.all %}
-            <div class="mt-2">
-                <b>Файлы:</b>
-                <ul class="mb-0">
-                    {% for a in e.attachments.all %}
-                    <li>
-                        <a href="{{ a.file.url }}" target="_blank">{{ a.title|default:a.file.name }}</a>
-                        <span class="text-muted">({{ a.uploaded_at|date:"d.m.Y H:i" }})</span>
-                    </li>
+                    <li>{{ rx.medication }} — {{ rx.dosage }}, {{ rx.frequency }}, {{ rx.duration_days }} дн.</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -118,7 +117,7 @@
         {% if user.role in "ADMIN DOC NUR" %}
         <div class="card mb-3">
             <div class="card-body">
-                <h6 class="card-title">Добавить заметку</h6>
+                <h6>Добавить заметку</h6>
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_note">
@@ -130,7 +129,7 @@
 
         <div class="card">
             <div class="card-body">
-                <h6 class="card-title">Добавить назначение</h6>
+                <h6>Добавить назначение</h6>
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_rx">
@@ -144,90 +143,18 @@
 </div>
 
 {% if user.role in "ADMIN DOC NUR" %}
-<!-- MODAL: Добавить визит -->
-<div class="modal fade" id="encounterModal" tabindex="-1" aria-labelledby="encounterModalLabel" aria-hidden="true">
+<div class="modal fade" id="encounterModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="post">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="encounterModalLabel">Новый визит</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-                </div>
-
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_encounter">
-                    {{ encounter_form.patient }}
-                    {{ encounter_form.doctor }}
-
-                    <div class="mb-3">
-                        <label class="form-label">Пациент</label>
-                        <input class="form-control"
-                            value="{{ object.last_name }} {{ object.first_name }} ({{ object.birth_date|date:'d.m.Y' }})"
-                            disabled>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Врач</label>
-                        <input class="form-control"
-                            value="{{ request.user.get_full_name|default:request.user.username }}" disabled>
-                    </div>
-
-                    <div class="mb-3">
-                        {{ encounter_form.started_at.label_tag }}
-                        {{ encounter_form.started_at }}
-                    </div>
-
-                    <div class="mb-3">
-                        {{ encounter_form.reason.label_tag }}
-                        {{ encounter_form.reason }}
-                    </div>
-
-                    <div class="mb-0">
-                        {{ encounter_form.status.label_tag }}
-                        {{ encounter_form.status }}
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button class="btn btn-primary">Создать визит</button>
-                </div>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_encounter">
+                {{ encounter_form.as_p }}
+                <button class="btn btn-primary w-100">Создать визит</button>
             </form>
         </div>
     </div>
 </div>
 {% endif %}
 
-{% endblock %}
-
-{% block extra_scripts %}
-{% if open_modal == 'encounter' %}
-<script>
-    const showEncounter = () => {
-        const m = new bootstrap.Modal(document.getElementById('encounterModal'));
-        m.show();
-    };
-    if (document.readyState === 'complete') showEncounter();
-    else document.addEventListener('DOMContentLoaded', showEncounter);
-</script>
-{% endif %}
-<script>
-    const encModalEl = document.getElementById('encounterModal');
-    if (encModalEl) {
-        encModalEl.addEventListener('shown.bs.modal', () => {
-            document.querySelectorAll('#encounterModal .js-datetime').forEach(el => {
-                if (!el._fp) {
-                    flatpickr(el, {
-                        enableTime: true,
-                        time_24hr: true,
-                        dateFormat: 'Y-m-d H:i',
-                        allowInput: true,
-                        locale: 'ru'
-                    });
-                }
-            });
-        });
-    }
-</script>
 {% endblock %}

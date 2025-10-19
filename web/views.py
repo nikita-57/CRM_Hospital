@@ -19,7 +19,7 @@ class Dashboard(RoleRequiredMixin, TemplateView):
     template_name = "dashboard.html"
 
 
-# web/views.py
+
 class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
     model = Patient
     template_name = "patients/list.html"
@@ -32,7 +32,7 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
         qs = self.apply_filters(qs)
         user = self.request.user
         if user.role == "DOC":
-            qs = qs.filter(encounters__doctor=user).distinct()
+            qs = qs.filter(department = user.department, is_active = True).distinct()
 
         q = (self.request.GET.get("q") or "").strip()
         if q:
@@ -61,17 +61,51 @@ class PatientDetail(RoleRequiredMixin, DetailView):
     allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
 
     # заранее подтягиваем связанные объекты
-    def get_queryset(self):
-        return (
-            Patient.objects
-            .prefetch_related(
-                Prefetch(
-                    "encounters",
-                    queryset=Encounter.objects.order_by("-started_at")
-                        .prefetch_related("notes", "prescriptions", "attachments")
-                )
-            )
+def get_queryset(self):
+    qs = super().get_queryset()
+
+    # ---- Фильтр по статусу (active/hidden/all) ----
+    status = self.request.GET.get("status", "active")
+    if status == "active":
+        qs = qs.filter(is_active=True)
+    elif status == "hidden":
+        qs = qs.filter(is_active=False)
+    # "all" – ничего не фильтруем
+
+    # ---- Фильтр по отделению ----
+    department = self.request.GET.get("department")
+    user = self.request.user
+
+    # Врачи и медсёстры видят только своё отделение
+    if user.role in {"DOC", "NUR"}:
+        if user.department:
+            qs = qs.filter(department=user.department)
+        else:
+            qs = qs.none()  # если нет отделения — ничего не показываем
+    # REG и ADMIN — можно по отделению фильтровать из UI
+    if department:
+        qs = qs.filter(department=department)
+
+    # ---- Фильтр по возрасту ----
+    patient_type = self.request.GET.get("type")
+    if patient_type == "adult":
+        qs = qs.filter(patient_type="adult")
+    elif patient_type == "child":
+        qs = qs.filter(patient_type="child")
+
+    # ---- Поиск ----
+    q = (self.request.GET.get("q") or "").strip()
+    if q:
+        qs = qs.filter(
+            Q(last_name__icontains=q) |
+            Q(first_name__icontains=q) |
+            Q(phone__icontains=q) |
+            Q(document_id__icontains=q) |
+            Q(insurance_number__icontains=q)
         )
+
+    return qs
+
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -215,4 +249,12 @@ class PatientSoftDelete(RoleRequiredMixin, View):
         patient.is_active = False
         patient.save()
         messages.success(request, "Пациент успешно удален.")
+        return redirect("web:patients")
+
+class PatientRestore(RoleRequiredMixin, View):
+    def post(self, request, pk):
+        patient = get_object_or_404(Patient, pk=pk)
+        patient.is_active = True
+        patient.save()
+        messages.success(request, "Пациент восстановлен.")
         return redirect("web:patients")

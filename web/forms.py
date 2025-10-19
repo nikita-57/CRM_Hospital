@@ -12,6 +12,7 @@ class PatientForm(forms.ModelForm):
             "birth_date", "gender","patient_type",
             "phone", "email",
             "document_id", "insurance_number",
+            "department",
             "address", "emergency_contact",
         ]
         widgets = {
@@ -41,6 +42,7 @@ class PatientForm(forms.ModelForm):
             "insurance_number": forms.TextInput(attrs={"class": "form-control"}),
             "address": forms.TextInput(attrs={"class": "form-control"}),
             "emergency_contact": forms.TextInput(attrs={"class": "form-control"}),
+            "department": forms.Select(attrs={"class": "form-select"}),
         }
 
     def __init__(self, *args, **kwargs):

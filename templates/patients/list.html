@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Пациенты — MedCRM{% endblock %}
 {% block content %}
-
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Пациенты</h3>
     {% if user.role in "ADMIN REG DOC" %}
@@ -9,44 +8,15 @@
     {% endif %}
 </div>
 
-<!-- Кнопки фильтра по типу -->
-<div class="mb-3">
-    <a class="btn btn-outline-primary {% if request.path == '/patients/adults/' %}active{% endif %}"
-        href="{% url 'web:patients_adults' %}">Взрослые</a>
-    <a class="btn btn-outline-primary {% if request.path == '/patients/children/' %}active{% endif %}"
-        href="{% url 'web:patients_children' %}">Дети</a>
-    <a class="btn btn-outline-primary {% if request.path == '/patients/' %}active{% endif %}"
-        href="{% url 'web:patients' %}">Все</a>
-</div>
-
-<!-- Поиск и фильтр по статусу -->
-<form method="get" class="row g-2 mb-3">
+<form class="row g-2 mb-3">
     <div class="col-auto">
-        <input name="q" class="form-control" placeholder="Поиск: фамилия / имя / телефон / номер"
-            value="{{ request.GET.q }}">
+        <input name="q" class="form-control" placeholder="Поиск: фамилия/имя/телефон" value="{{ request.GET.q }}">
     </div>
-
-    <div class="col-auto">
-        <select name="status" class="form-select">
-            <option value="active" {% if request.GET.status == "active" or not request.GET.status %}selected{% endif %}>
-                Активные
-            </option>
-            <option value="deleted" {% if request.GET.status == "deleted" %}selected{% endif %}>
-                Удалённые
-            </option>
-            <option value="all" {% if request.GET.status == "all" %}selected{% endif %}>
-                Все
-            </option>
-        </select>
-    </div>
-
     <div class="col-auto">
         <button class="btn btn-outline-primary">Найти</button>
     </div>
 </form>
 
-
-<!-- Таблица пациентов -->
 <table class="table table-hover align-middle">
     <thead>
         <tr>
@@ -54,74 +24,70 @@
             <th>Имя</th>
             <th>Дата рождения</th>
             <th>Возраст</th>
-            <th>Тип</th>
+            <th>Отделение</th>
             <th>Телефон</th>
             <th>Личный номер</th>
-            <th class="text-center" style="width:180px;">Действия</th>
+            <th>Статус</th>
+            <th class="text-end">Действия</th>
         </tr>
     </thead>
     <tbody>
         {% for p in object_list %}
-        <tr class="{% if not p.is_active %}table-danger{% endif %}">
-            <td>
-                {{ p.last_name }}
-                {% if not p.is_active %}
-                <span class="badge bg-danger ms-1">Удалён</span>
-                {% endif %}
-            </td>
+        <tr {% if not p.is_active %}class="table-secondary" {% endif %}>
+            <td>{{ p.last_name }}</td>
             <td>{{ p.first_name }}</td>
             <td>{{ p.birth_date|date:"d.m.Y" }}</td>
-            <td>{% if p.age %}{{ p.age }}{% else %}-{% endif %}</td>
-            <td>
-                {% if p.patient_type == "child" %}
-                <span class="badge bg-info text-dark">Ребёнок</span>
-                {% else %}
-                <span class="badge bg-secondary">Взрослый</span>
-                {% endif %}
-            </td>
+            <td>{% if p.age %}{{ p.age }}{% else %}—{% endif %}</td>
+            <td>{{ p.get_department_display }}</td>
             <td>{{ p.phone|default:"—" }}</td>
             <td>{{ p.document_id|default:"—" }}</td>
-            <td class="text-center">
+            <td>
+                {% if p.is_active %}
+                <span class="badge bg-success">Активен</span>
+                {% else %}
+                <span class="badge bg-secondary">Скрыт</span>
+                {% endif %}
+            </td>
+            <td class="text-end">
                 <a class="btn btn-sm btn-primary" href="{% url 'web:patient_detail' p.id %}">Открыть</a>
 
-                {% if user.role == "REG" and p.is_active %}
+                {% if user.role == "REG" %}
+                {% if p.is_active %}
                 <form method="post" action="{% url 'web:patient_delete' p.id %}" class="d-inline">
                     {% csrf_token %}
-                    <button class="btn btn-sm btn-danger"
-                        onclick="return confirm('Скрыть этого пациента из активных?')">
-                        Скрыть
-                    </button>
+                    <button class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Скрыть пациента?')">Скрыть</button>
                 </form>
+                {% else %}
+                <form method="post" action="{% url 'web:patient_restore' p.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-success">Вернуть</button>
+                </form>
+                {% endif %}
                 {% endif %}
             </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="8" class="text-muted text-center py-3">Ничего не найдено</td>
+            <td colspan="9" class="text-muted text-center">Ничего не найдено</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
-<!-- Пагинация -->
 {% if is_paginated %}
 <nav>
-    <ul class="pagination justify-content-center">
+    <ul class="pagination">
         {% if page_obj.has_previous %}
         <li class="page-item">
-            <a class="page-link"
-                href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}&status={{ request.GET.status }}">Назад</a>
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Назад</a>
         </li>
         {% endif %}
-
-        <li class="page-item disabled">
-            <span class="page-link">Стр. {{ page_obj.number }} / {{ paginator.num_pages }}</span>
-        </li>
-
+        <li class="page-item disabled"><span class="page-link">Стр. {{ page_obj.number }} из {{ paginator.num_pages
+                }}</span></li>
         {% if page_obj.has_next %}
         <li class="page-item">
-            <a class="page-link"
-                href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}&status={{ request.GET.status }}">Вперёд</a>
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Вперёд</a>
         </li>
         {% endif %}
     </ul>
