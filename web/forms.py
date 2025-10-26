@@ -52,7 +52,7 @@ class PatientForm(forms.ModelForm):
 class EncounterForm(forms.ModelForm):
     class Meta:
         model = Encounter
-        fields = ["patient", "doctor", "started_at", "reason", "status"]
+        fields = [ "patient", "doctor", "started_at", "reason", "status"]
         widgets = {
             "started_at": forms.TextInput(
                 attrs={

@@ -60,124 +60,84 @@ class PatientDetail(RoleRequiredMixin, DetailView):
     template_name = "patients/detail.html"
     allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
 
-    # заранее подтягиваем связанные объекты
-def get_queryset(self):
-    qs = super().get_queryset()
+    def get_queryset(self):
+        # Фильтры для безопасности: врачи и медсёстры видят только своё отделение
+        qs = super().get_queryset()
+        user = self.request.user
 
-    # ---- Фильтр по статусу (active/hidden/all) ----
-    status = self.request.GET.get("status", "active")
-    if status == "active":
-        qs = qs.filter(is_active=True)
-    elif status == "hidden":
-        qs = qs.filter(is_active=False)
-    # "all" – ничего не фильтруем
+        if user.role in {"DOC", "NUR"}:
+            qs = qs.filter(department=user.department, is_active=True)
 
-    # ---- Фильтр по отделению ----
-    department = self.request.GET.get("department")
-    user = self.request.user
-
-    # Врачи и медсёстры видят только своё отделение
-    if user.role in {"DOC", "NUR"}:
-        if user.department:
-            qs = qs.filter(department=user.department)
-        else:
-            qs = qs.none()  # если нет отделения — ничего не показываем
-    # REG и ADMIN — можно по отделению фильтровать из UI
-    if department:
-        qs = qs.filter(department=department)
-
-    # ---- Фильтр по возрасту ----
-    patient_type = self.request.GET.get("type")
-    if patient_type == "adult":
-        qs = qs.filter(patient_type="adult")
-    elif patient_type == "child":
-        qs = qs.filter(patient_type="child")
-
-    # ---- Поиск ----
-    q = (self.request.GET.get("q") or "").strip()
-    if q:
-        qs = qs.filter(
-            Q(last_name__icontains=q) |
-            Q(first_name__icontains=q) |
-            Q(phone__icontains=q) |
-            Q(document_id__icontains=q) |
-            Q(insurance_number__icontains=q)
-        )
-
-    return qs
-
+        return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         patient: Patient = self.object
 
-        # только визиты текущего пациента
-        enc_qs = Encounter.objects.filter(patient=patient).order_by("started_at")
+        # все визиты пациента
+        enc_qs = Encounter.objects.filter(patient=patient).order_by("-started_at")
         ctx["encounters"] = enc_qs
 
-        # --- форма визита (для модалки) ---
-        # фиксируем пациента и текущего пользователя-врача (поля будут скрыты в форме)
-        ctx.setdefault("encounter_form", EncounterForm(initial={
+        # форма создания визита
+        ctx["encounter_form"] = EncounterForm(initial={
             "patient": patient.id,
             "doctor": self.request.user.id,
-        }))
+        })
 
-        # --- формы заметки и назначения ---
+        # формы заметок и назначений
         default_enc_id = enc_qs[0].id if enc_qs else None
 
-        note_form = ctx.get("note_form") or NoteForm(initial={"encounter": default_enc_id})
+        note_form = NoteForm(initial={"encounter": default_enc_id})
         note_form.fields["encounter"].queryset = enc_qs
         ctx["note_form"] = note_form
 
-        rx_form = ctx.get("rx_form") or PrescriptionForm(initial={"encounter": default_enc_id})
+        rx_form = PrescriptionForm(initial={"encounter": default_enc_id})
         rx_form.fields["encounter"].queryset = enc_qs
         ctx["rx_form"] = rx_form
 
         return ctx
 
     def post(self, request, *args, **kwargs):
-        self.object: Patient = self.get_object()
+        self.object = self.get_object()
         action = request.POST.get("action")
 
-        # --- создать визит (модалка) ---
+        # --- создать визит ---
         if action == "add_encounter":
-            if request.user.role not in {"ADMIN", "DOC", "NUR"}:
-                messages.error(request, "Нет прав создавать визит.")
+            if request.user.role not in {"ADMIN", "DOC", "NUR", "REG"}:
+                messages.error(request, "Нет прав на создание визитов.")
                 return redirect(self.request.path)
 
             form = EncounterForm(request.POST)
             if form.is_valid():
-                form.save()
-                messages.success(request, "Визит создан.")
-                return redirect(self.request.path)
+                encounter = form.save(commit=False)
+                encounter.patient = self.object
+                encounter.doctor = request.user
+                if not encounter.started_at:
+                    encounter.started_at = timezone.now()
+                encounter.save()
+                messages.success(request, "Визит успешно создан.")
+            else:
+                messages.error(request, "Ошибка в форме визита.")
 
-            # невалидная форма — показываем модалку снова
-            context = self.get_context_data()
-            context["encounter_form"] = form
-            context["open_modal"] = "encounter"
-            return self.render_to_response(context)
+            return redirect(self.request.path)
 
         # --- добавить заметку ---
         if action == "add_note":
-            if request.user.role not in {"ADMIN", "DOC", "NUR"}:
+            if request.user.role not in {"ADMIN", "DOC", "NUR", "REG"}:
                 messages.error(request, "Нет прав добавлять заметки.")
                 return redirect(self.request.path)
 
             form = NoteForm(request.POST)
-            # ограничим выбор визитов этим пациентом
             form.fields["encounter"].queryset = Encounter.objects.filter(patient=self.object)
 
             if form.is_valid():
-                note: Note = form.save(commit=False)
+                note = form.save(commit=False)
                 note.author = request.user
-                # безопасность: убеждаемся, что заметка к визиту этого пациента
-                if note.encounter.patient_id != self.object.id:
-                    messages.error(request, "Нельзя добавить заметку к другому пациенту.")
-                    return redirect(self.request.path)
                 note.save()
                 messages.success(request, "Заметка добавлена.")
             else:
-                messages.error(request, "Проверьте поля заметки.")
+                messages.error(request, "Ошибка при добавлении заметки.")
+
             return redirect(self.request.path)
 
         # --- добавить назначение ---
@@ -190,36 +150,24 @@ def get_queryset(self):
             form.fields["encounter"].queryset = Encounter.objects.filter(patient=self.object)
 
             if form.is_valid():
-                rx: Prescription = form.save(commit=False)
-                if rx.encounter.patient_id != self.object.id:
-                    messages.error(request, "Нельзя добавить назначение к другому пациенту.")
-                    return redirect(self.request.path)
+                rx = form.save(commit=False)
                 rx.save()
                 messages.success(request, "Назначение добавлено.")
             else:
-                messages.error(request, "Проверьте поля назначения.")
+                messages.error(request, "Ошибка при добавлении назначения.")
+
             return redirect(self.request.path)
 
         # --- закрыть визит ---
         if action == "close_encounter":
-            if request.user.role not in {"ADMIN", "DOC", "NUR"}:
-                messages.error(request, "Нет прав закрывать визит.")
-                return redirect(self.request.path)
-
             enc_id = request.POST.get("encounter_id")
-            try:
-                enc = self.object.encounters.get(id=enc_id)
-            except Encounter.DoesNotExist:
-                messages.error(request, "Визит не найден.")
-                return redirect(self.request.path)
-
+            enc = get_object_or_404(Encounter, id=enc_id, patient=self.object)
             enc.finished_at = timezone.now()
             enc.status = Encounter.Status.FINISHED
             enc.save(update_fields=["finished_at", "status"])
             messages.success(request, "Визит закрыт.")
             return redirect(self.request.path)
 
-        # неизвестное действие
         return redirect(self.request.path)
 
 class PatientUpdate(RoleRequiredMixin, UpdateView):

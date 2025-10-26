@@ -16,7 +16,7 @@
     <h3>{{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
     </h3>
 
-    {% if user.role in "ADMIN DOC NUR" %}
+    {% if user.role in "ADMIN DOC NUR REG" %}
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#encounterModal">+ Новый визит</button>
     {% endif %}
 </div>
@@ -114,7 +114,7 @@
     </div>
 
     <div class="col-md-5">
-        {% if user.role in "ADMIN DOC NUR" %}
+        {% if user.role in "ADMIN DOC NUR REG" %}
         <div class="card mb-3">
             <div class="card-body">
                 <h6>Добавить заметку</h6>
@@ -142,15 +142,37 @@
     </div>
 </div>
 
-{% if user.role in "ADMIN DOC NUR" %}
+{% if user.role in "ADMIN DOC NUR REG" %}
 <div class="modal fade" id="encounterModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_encounter">
-                {{ encounter_form.as_p }}
-                <button class="btn btn-primary w-100">Создать визит</button>
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Новый визит</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Дата и время визита</label>
+                        {{ encounter_form.started_at }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Причина</label>
+                        {{ encounter_form.reason }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Статус</label>
+                        {{ encounter_form.status }}
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-primary w-100">Создать визит</button>
+                </div>
             </form>
         </div>
     </div>

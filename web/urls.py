@@ -1,8 +1,7 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import Dashboard, PatientList, PatientCreate, PatientDetail, PatientSoftDelete, PatientRestore
-from .views import PatientUpdate
-from .views import AdultPatientList, ChildrenPatients
+from .views import PatientUpdate, AdultPatientList, ChildrenPatients
 
 app_name = "web"
 
@@ -14,9 +13,8 @@ urlpatterns = [
     path("patients/create/", PatientCreate.as_view(), name="patient_create"),
     path("patients/<int:pk>/", PatientDetail.as_view(), name="patient_detail"),
     path("patients/<int:pk>/edit/", PatientUpdate.as_view(), name="patient_update"),
-    path("login/", auth_views.LoginView.as_view(template_name="auth/login.html"), name="login"),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("patients/<int:pk>/delete/", PatientSoftDelete.as_view(), name="patient_delete"),
     path("patients/<int:pk>/restore/", PatientRestore.as_view(), name="patient_restore"),
-
+    path("login/", auth_views.LoginView.as_view(template_name="auth/login.html"), name="login"),
+    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
 ]
