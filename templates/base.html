@@ -48,6 +48,9 @@
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="{% url 'web:patients' %}">Пациенты</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'web:departments' %}">Статистика</a>
+                    </li>
                 </ul>
                 <div class="d-flex">
                     {% if user.is_authenticated %}

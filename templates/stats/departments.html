@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Статистика отделений — MedCRM{% endblock %}
+{% block content %}
+<h3 class="mb-3">Загруженность отделений</h3>
+
+<form class="row g-2 mb-4" method="get">
+    <div class="col-auto">
+        <select name="period" class="form-select">
+            <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>По месяцам</option>
+        </select>
+    </div>
+
+    <!-- Выбор месяца -->
+    <div class="col-auto">
+        <input type="month" name="month" class="form-control"
+               value="{{ request.GET.month }}">
+    </div>
+
+    <!-- Отделение -->
+    <div class="col-auto">
+        <select name="department" class="form-select">
+            <option value="">Все отделения</option>
+            {% for code, name in departments %}
+            <option value="{{ code }}" {% if request.GET.department == code %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <button class="btn btn-outline-primary">Показать</button>
+    </div>
+</form>
+
+{% if table %}
+<table class="table table-bordered table-sm">
+    <thead>
+        <tr>
+            <th>ФИО</th>
+            <th>Личный номер</th>
+            {% for day in dates %}
+                <th class="text-center">{{ day }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in table %}
+        <tr>
+            <td>{{ row.fio }}</td>
+            <td>{{ row.document_id }}</td>
+            {% for visit in row.visits %}
+                <td class="text-center">
+                    {% if visit > 0 %}
+                        ✓
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">Нет данных для отображения.</p>
+{% endif %}
+{% endblock %}

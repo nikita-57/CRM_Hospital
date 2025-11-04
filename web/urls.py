@@ -2,6 +2,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import Dashboard, PatientList, PatientCreate, PatientDetail, PatientSoftDelete, PatientRestore
 from .views import PatientUpdate, AdultPatientList, ChildrenPatients
+from .views import StatsView
 
 app_name = "web"
 
@@ -17,4 +18,6 @@ urlpatterns = [
     path("patients/<int:pk>/restore/", PatientRestore.as_view(), name="patient_restore"),
     path("login/", auth_views.LoginView.as_view(template_name="auth/login.html"), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("stats/departments/", StatsView.as_view(), name="departments"),
+
 ]

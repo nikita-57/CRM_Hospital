@@ -10,9 +10,17 @@ from django.views.generic import UpdateView
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
 from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm
-from patients.models import Patient
+from patients.models import Patient, DEPARTMENT_CHOICES
 from clinical.models import Encounter, Note, Prescription
 from .mixins import RoleRequiredMixin, PatientFilterMixin
+from django.db.models import Count
+from django.db.models.functions import TruncWeek, TruncMonth, TruncDay
+from django.db import models
+from django.views.generic import TemplateView
+from django.shortcuts import redirect
+from calendar import monthrange
+from datetime import datetime, date, timedelta
+import calendar
 
 
 class Dashboard(RoleRequiredMixin, TemplateView):
@@ -61,7 +69,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
     allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
 
     def get_queryset(self):
-        # Фильтры для безопасности: врачи и медсёстры видят только своё отделение
+        """Врачи и медсёстры видят только пациентов своего отделения."""
         qs = super().get_queryset()
         user = self.request.user
 
@@ -72,19 +80,16 @@ class PatientDetail(RoleRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        patient: Patient = self.object
+        patient = self.object
 
-        # все визиты пациента
+        # Все визиты пациента
         enc_qs = Encounter.objects.filter(patient=patient).order_by("-started_at")
         ctx["encounters"] = enc_qs
 
-        # форма создания визита
-        ctx["encounter_form"] = EncounterForm(initial={
-            "patient": patient.id,
-            "doctor": self.request.user.id,
-        })
+        # Форма создания визита (без patient и doctor — они будут выставлены в post)
+        ctx["encounter_form"] = EncounterForm()
 
-        # формы заметок и назначений
+        # Формы заметки и назначения
         default_enc_id = enc_qs[0].id if enc_qs else None
 
         note_form = NoteForm(initial={"encounter": default_enc_id})
@@ -101,27 +106,26 @@ class PatientDetail(RoleRequiredMixin, DetailView):
         self.object = self.get_object()
         action = request.POST.get("action")
 
-        # --- создать визит ---
+        # --- Создание визита ---
         if action == "add_encounter":
             if request.user.role not in {"ADMIN", "DOC", "NUR", "REG"}:
-                messages.error(request, "Нет прав на создание визитов.")
+                messages.error(request, "Нет прав на создание визита.")
                 return redirect(self.request.path)
 
             form = EncounterForm(request.POST)
             if form.is_valid():
                 encounter = form.save(commit=False)
-                encounter.patient = self.object
-                encounter.doctor = request.user
+                encounter.patient = self.object      # Привязываем к текущему пациенту
+                encounter.doctor = request.user      # Автор визита – тот, кто создал
                 if not encounter.started_at:
                     encounter.started_at = timezone.now()
                 encounter.save()
                 messages.success(request, "Визит успешно создан.")
             else:
-                messages.error(request, "Ошибка в форме визита.")
-
+                messages.error(request, f"Ошибка в форме визита: {form.errors}")
             return redirect(self.request.path)
 
-        # --- добавить заметку ---
+        # --- Добавить заметку ---
         if action == "add_note":
             if request.user.role not in {"ADMIN", "DOC", "NUR", "REG"}:
                 messages.error(request, "Нет прав добавлять заметки.")
@@ -136,11 +140,10 @@ class PatientDetail(RoleRequiredMixin, DetailView):
                 note.save()
                 messages.success(request, "Заметка добавлена.")
             else:
-                messages.error(request, "Ошибка при добавлении заметки.")
-
+                messages.error(request, f"Ошибка заметки: {form.errors}")
             return redirect(self.request.path)
 
-        # --- добавить назначение ---
+        # --- Добавить назначение ---
         if action == "add_rx":
             if request.user.role not in {"ADMIN", "DOC", "NUR"}:
                 messages.error(request, "Нет прав добавлять назначения.")
@@ -154,11 +157,10 @@ class PatientDetail(RoleRequiredMixin, DetailView):
                 rx.save()
                 messages.success(request, "Назначение добавлено.")
             else:
-                messages.error(request, "Ошибка при добавлении назначения.")
-
+                messages.error(request, f"Ошибка назначения: {form.errors}")
             return redirect(self.request.path)
 
-        # --- закрыть визит ---
+        # --- Закрыть визит ---
         if action == "close_encounter":
             enc_id = request.POST.get("encounter_id")
             enc = get_object_or_404(Encounter, id=enc_id, patient=self.object)
@@ -206,3 +208,63 @@ class PatientRestore(RoleRequiredMixin, View):
         patient.save()
         messages.success(request, "Пациент восстановлен.")
         return redirect("web:patients")
+
+class StatsView(RoleRequiredMixin, TemplateView):
+    template_name = 'stats/departments.html'
+    allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        # 1. Получаем месяц из GET-параметров
+        month_param = self.request.GET.get("month")  # формат YYYY-MM
+        if month_param:
+            year, month = map(int, month_param.split("-"))
+        else:
+            today = date.today()
+            year, month = today.year, today.month
+
+        # 2. Генерируем список всех дней месяца
+        _, days_in_month = calendar.monthrange(year, month)
+        dates = [str(day) for day in range(1, days_in_month + 1)]
+        # 3. Фильтрация визитов по месяцу
+        department = self.request.GET.get("department")
+        encounters = Encounter.objects.filter(started_at__year=year, started_at__month=month)
+        if department:
+            encounters = encounters.filter(patient__department=department)
+
+        # 4. Группировка: пациент + день
+        data = encounters.values(
+            "patient__last_name", "patient__first_name", "patient__document_id"
+        ).annotate(
+            day=TruncDay("started_at"),
+            count=models.Count("id")
+        )
+
+        # 5. Уникальные пациенты
+        patients = sorted({
+            (row["patient__last_name"], row["patient__first_name"], row["patient__document_id"])
+            for row in data
+        })
+
+        # 6. Таблица
+        table = []
+        for last, first, doc in patients:
+            row = {"fio": f"{last} {first}", "document_id": doc, "visits": []}
+            for d in dates:
+                visit = next(
+    (r["count"] for r in data
+     if str(r["day"].day) == str(d) and
+        r["patient__last_name"] == last and
+        r["patient__first_name"] == first),
+    0
+)
+                row["visits"].append(visit)
+            table.append(row)
+
+        ctx["dates"] = dates
+        ctx["table"] = table
+        ctx["departments"] = DEPARTMENT_CHOICES
+        ctx["selected_month"] = f"{year}-{month:02d}"
+
+        return ctx
