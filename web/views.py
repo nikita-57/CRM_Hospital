@@ -33,14 +33,17 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
     template_name = "patients/list.html"
     paginate_by = 20
     allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
+    context_object_name = "patients"
+    
 
     def get_queryset(self):
         qs = super().get_queryset()
 
         qs = self.apply_filters(qs)
         user = self.request.user
+
         if user.role == "DOC":
-            qs = qs.filter(department = user.department, is_active = True).distinct()
+            qs = qs.filter(department=user.department, is_active=True).distinct()
 
         q = (self.request.GET.get("q") or "").strip()
         if q:
@@ -52,7 +55,12 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
                 Q(insurance_number__icontains=q)
             )
 
+        p_type = self.request.GET.get("type")   # type = adult / child
+        if p_type in ["adult", "child"]:
+            qs = qs.filter(patient_type=p_type)
+
         return qs
+
 
 
 
