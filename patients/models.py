@@ -9,6 +9,23 @@ DEPARTMENT_CHOICES = [
     ("neurology", "Неврология"),
 ]
 
+class Facility(models.Model):
+    FACILITY_TYPES = [
+        ("hospital", "Больница"),
+        ("sanatorium", "Санаторий"),
+        ("daycare", "Дневной стационар"),
+    ]
+    name = models.CharField("Название", max_length=255)
+    type = models.CharField("Тип учреждения", max_length=20, choices=FACILITY_TYPES)
+    address = models.CharField("Адрес", max_length=255, blank=True)
+    def __str__(self):
+        return f"{self.name} ({self.get_type_display()})"
+    
+    class Meta:
+        verbose_name = "Место размещения"
+        verbose_name_plural = "Места размещения"
+
+
 class Patient(models.Model):
     GENDER_CHOICES = [
         ("M", "Муж"),
@@ -40,7 +57,14 @@ class Patient(models.Model):
         choices = DEPARTMENT_CHOICES,
         default = "therapy",
     )
-
+    facility = models.ForeignKey(
+        Facility,
+        verbose_name="Место размещения",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="patients",
+    )
     phone = models.CharField("Телефон", max_length=20, blank=True)
     email = models.EmailField("Email", blank=True)
     document_id = models.CharField("Личный номер", max_length=64, blank=True)

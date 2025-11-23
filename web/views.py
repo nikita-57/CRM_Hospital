@@ -10,7 +10,7 @@ from django.views.generic import UpdateView
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
 from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm
-from patients.models import Patient, DEPARTMENT_CHOICES
+from patients.models import Patient, DEPARTMENT_CHOICES, Facility
 from clinical.models import Encounter, Note, Prescription
 from .mixins import RoleRequiredMixin, PatientFilterMixin
 from django.db.models import Count
@@ -54,12 +54,24 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
                 Q(document_id__icontains=q) |
                 Q(insurance_number__icontains=q)
             )
+        facility = self.request.GET.get("facility")
+        if facility:
+            if facility == "none":
+                qs = qs.filter(facility__isnull=True)
+            else:
+                qs = qs.filter(facility__id=facility)
+        return qs
+    
 
         p_type = self.request.GET.get("type")   # type = adult / child
         if p_type in ["adult", "child"]:
             qs = qs.filter(patient_type=p_type)
 
         return qs
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["facilities"] = Facility.objects.all()
+        return ctx
 
 
 

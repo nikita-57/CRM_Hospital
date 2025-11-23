@@ -16,14 +16,29 @@
         <button class="btn btn-outline-primary">Найти</button>
     </div>
 </form>
+
 <form method="get" class="mb-3 d-flex gap-2">
     <select name="type" class="form-select" style="max-width: 200px;">
         <option value="" {% if not request.GET.type %}selected{% endif %}>Все пациенты</option>
         <option value="adult" {% if request.GET.type == 'adult' %}selected{% endif %}>Взрослые</option>
         <option value="child" {% if request.GET.type == 'child' %}selected{% endif %}>Дети</option>
+        <option value="unknown" {% if request.GET.type == 'unknown' %}selected{% endif %}>Неопределен</option>
     </select>
+
+    <select name="facility" class="form-select" style="max-width: 250px;">
+        <option value="" {% if not request.GET.facility %}selected{% endif %}>Все места размещения</option>
+        <option value="none" {% if request.GET.facility == 'none' %}selected{% endif %}>Без размещения</option>
+
+        {% for f in facilities %}
+        <option value="{{ f.id }}" {% if request.GET.facility == f.id|stringformat:'s' %}selected{% endif %}>
+            {{ f.name }} ({{ f.get_type_display }})
+        </option>
+        {% endfor %}
+    </select>
+
     <button class="btn btn-outline-primary">Фильтровать</button>
 </form>
+
 <table class="table table-hover align-middle">
     <thead>
         <tr>
@@ -35,12 +50,15 @@
             <th>Телефон</th>
             <th>Личный номер</th>
             <th>Статус</th>
+            <th>Место размещения</th>
             <th class="text-end">Действия</th>
         </tr>
     </thead>
+
     <tbody>
         {% for p in object_list %}
         <tr {% if not p.is_active %}class="table-secondary" {% endif %}>
+
             <td>{{ p.last_name }}</td>
             <td>{{ p.first_name }}</td>
             <td>{{ p.birth_date|date:"d.m.Y" }}</td>
@@ -48,6 +66,7 @@
             <td>{{ p.get_department_display }}</td>
             <td>{{ p.phone|default:"—" }}</td>
             <td>{{ p.document_id|default:"—" }}</td>
+
             <td>
                 {% if p.is_active %}
                 <span class="badge bg-success">Активен</span>
@@ -55,6 +74,9 @@
                 <span class="badge bg-secondary">Скрыт</span>
                 {% endif %}
             </td>
+
+            <td>{{ p.facility|default:"—" }}</td>
+
             <td class="text-end">
                 <a class="btn btn-sm btn-primary" href="{% url 'web:patient_detail' p.id %}">Открыть</a>
 
@@ -73,10 +95,11 @@
                 {% endif %}
                 {% endif %}
             </td>
+
         </tr>
         {% empty %}
         <tr>
-            <td colspan="9" class="text-muted text-center">Ничего не найдено</td>
+            <td colspan="10" class="text-muted text-center">Ничего не найдено</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -90,8 +113,11 @@
             <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Назад</a>
         </li>
         {% endif %}
-        <li class="page-item disabled"><span class="page-link">Стр. {{ page_obj.number }} из {{ paginator.num_pages
-                }}</span></li>
+
+        <li class="page-item disabled">
+            <span class="page-link">Стр. {{ page_obj.number }} из {{ paginator.num_pages }}</span>
+        </li>
+
         {% if page_obj.has_next %}
         <li class="page-item">
             <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Вперёд</a>

@@ -12,7 +12,7 @@ class PatientForm(forms.ModelForm):
             "birth_date", "gender","patient_type",
             "phone", "email",
             "document_id", "insurance_number",
-            "department",
+            "department", "facility",
             "address", "emergency_contact",
         ]
         widgets = {
@@ -25,6 +25,7 @@ class PatientForm(forms.ModelForm):
                     "patient_type": forms.Select(attrs={"class": "form-select"}),
                 }
             ),
+            "facility": forms.Select(attrs={"class": "form-select"}),
             "phone": forms.TextInput(
                 attrs={
                     "class": "form-control js-phone",
@@ -50,17 +51,23 @@ class PatientForm(forms.ModelForm):
         self.fields["birth_date"].widget.attrs.setdefault("data-max", date.today().isoformat())
 
 class EncounterForm(forms.ModelForm):
+    started_at = forms.DateTimeField(
+        required=False,
+        input_formats=["%Y-%m-%d %H:%M"],
+        widget=forms.DateTimeInput(
+            format="%Y-%m-%d %H:%M",
+            attrs={
+                "type": "text",
+                "class": "form-control js-datetime",
+                "placeholder": "ГГГГ-ММ-ДД ЧЧ:ММ",
+            },
+        ),
+    )
+
     class Meta:
         model = Encounter
         fields = ["started_at", "reason", "status"]
         widgets = {
-            "started_at": forms.TextInput(
-                attrs={
-                    "type": "text",
-                    "class": "form-control js-datetime",
-                    "placeholder": "ГГГГ-ММ-ДД ЧЧ:ММ",
-                }
-            ),
             "patient": forms.Select(attrs={"class": "form-select"}),
             "doctor": forms.Select(attrs={"class": "form-select"}),
             "reason": forms.TextInput(attrs={"class": "form-control", "placeholder": "Причина визита"}),
@@ -69,7 +76,6 @@ class EncounterForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["started_at"].input_formats = ["%Y-%m-%d %H:%M"]
         if self.initial.get('patient'):
             self.fields['patient'].widget = forms.HiddenInput()
         if self.initial.get('doctor'):
