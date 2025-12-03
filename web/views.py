@@ -72,6 +72,7 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["facilities"] = Facility.objects.all()
         return ctx
+    
 
 
 
