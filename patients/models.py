@@ -35,6 +35,7 @@ class Patient(models.Model):
     PATIENT_TYPE_CHOICES = [
         ("adult", "Взрослый"),
         ("child", "Ребёнок"),
+        ("unknown", "Неопределён"),
     ]
 
     first_name = models.CharField("Имя", max_length=120)
