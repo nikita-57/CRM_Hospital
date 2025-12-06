@@ -17,15 +17,15 @@
     </div>
 </form>
 
-<form method="get" class="mb-3 d-flex gap-2">
-    <select name="type" class="form-select" style="max-width: 200px;">
+<form method = "get" class = "mb-3 d-flex gap-2">
+    <select name = "type" class="form-select" style = "max-width: 200px;">
         <option value="" {% if not request.GET.type %}selected{% endif %}>Все пациенты</option>
         <option value="adult" {% if request.GET.type == 'adult' %}selected{% endif %}>Взрослые</option>
         <option value="child" {% if request.GET.type == 'child' %}selected{% endif %}>Дети</option>
         <option value="unknown" {% if request.GET.type == 'unknown' %}selected{% endif %}>Неопределен</option>
     </select>
 
-    <select name="facility" class="form-select" style="max-width: 250px;">
+    <select name = "facility" class="form-select" style="max-width: 250px;">
         <option value="" {% if not request.GET.facility %}selected{% endif %}>Все места размещения</option>
         <option value="none" {% if request.GET.facility == 'none' %}selected{% endif %}>Без размещения</option>
 

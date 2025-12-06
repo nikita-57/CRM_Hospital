@@ -25,6 +25,7 @@ class PatientForm(forms.ModelForm):
                     "patient_type": forms.Select(attrs={"class": "form-select"}),
                 }
             ),
+            "patient_type": forms.Select(attrs={"class": "form-select"}),
             "facility": forms.Select(attrs={"class": "form-select"}),
             "phone": forms.TextInput(
                 attrs={

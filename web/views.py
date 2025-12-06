@@ -60,12 +60,12 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
                 qs = qs.filter(facility__isnull=True)
             else:
                 qs = qs.filter(facility__id=facility)
+        type_filter = self.request.GET.get("type")
+        if type_filter in {"adult", "child", "unknown"}:
+            qs = qs.filter(patient_type=type_filter)
         return qs
     
-
-        p_type = self.request.GET.get("type")   # type = adult / child
-        if p_type in ["adult", "child"]:
-            qs = qs.filter(patient_type=p_type)
+    
 
         return qs
     def get_context_data(self, **kwargs):
