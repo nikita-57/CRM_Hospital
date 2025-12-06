@@ -178,5 +178,24 @@
     </div>
 </div>
 {% endif %}
-
+<hr>
+<h4>История взаимодействий</h4>
+{% if interactions %}
+<ul class="list-group">
+    {% for interaction in interactions %}
+    <li class="list-group-item">
+        <strong>{{ interaction.get_action_display }}</strong> —
+        {{ interaction.description }} <br>
+        <small class="text-muted">
+            {{ interaction.created_at|date:"d.m.Y H:i" }}
+            {% if interaction.user %}
+            — {{ interaction.user.get_full_name }}
+            {% endif %}
+        </small>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-muted">Нет взаимодействий.</p>
+{% endif %}
 {% endblock %}

@@ -21,6 +21,7 @@ from django.shortcuts import redirect
 from calendar import monthrange
 from datetime import datetime, date, timedelta
 import calendar
+from clinical.utils import log_patient_interaction
 
 
 class Dashboard(RoleRequiredMixin, TemplateView):
@@ -64,10 +65,7 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
         if type_filter in {"adult", "child", "unknown"}:
             qs = qs.filter(patient_type=type_filter)
         return qs
-    
-    
 
-        return qs
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["facilities"] = Facility.objects.all()
@@ -141,6 +139,13 @@ class PatientDetail(RoleRequiredMixin, DetailView):
                 if not encounter.started_at:
                     encounter.started_at = timezone.now()
                 encounter.save()
+                from clinical.utils import log_patient_interaction
+                log_patient_interaction(
+                    patient = self.object,
+                    action = "visit_created",
+                    user = request.user,
+                    description = f"Создан визит ID {encounter.id}",
+                )
                 messages.success(request, "Визит успешно создан.")
             else:
                 messages.error(request, f"Ошибка в форме визита: {form.errors}")
@@ -159,6 +164,13 @@ class PatientDetail(RoleRequiredMixin, DetailView):
                 note = form.save(commit=False)
                 note.author = request.user
                 note.save()
+                from clinical.utils import log_patient_interaction
+                log_patient_interaction(
+                    patient = self.object,
+                    action = "note_add",
+                    user = request.user,
+                    description = f"Добавлена заметка ID {note.id}",
+                )
                 messages.success(request, "Заметка добавлена.")
             else:
                 messages.error(request, f"Ошибка заметки: {form.errors}")
@@ -176,6 +188,13 @@ class PatientDetail(RoleRequiredMixin, DetailView):
             if form.is_valid():
                 rx = form.save(commit=False)
                 rx.save()
+                from clinical.utils import log_patient_interaction
+                log_patient_interaction(
+                    patient = self.object,
+                    action = "rx_add",
+                    user = request.user,
+                    description = f"Добавлено назначение ID {rx.id}",
+                )
                 messages.success(request, "Назначение добавлено.")
             else:
                 messages.error(request, f"Ошибка назначения: {form.errors}")
@@ -188,6 +207,13 @@ class PatientDetail(RoleRequiredMixin, DetailView):
             enc.finished_at = timezone.now()
             enc.status = Encounter.Status.FINISHED
             enc.save(update_fields=["finished_at", "status"])
+            from clinical.utils import log_patient_interaction
+            log_patient_interaction(
+                patient = self.object,
+                action = "visit_closed",
+                user = request.user,
+                description = f"Закрыт визит ID {enc_id.id}",
+            )
             messages.success(request, "Визит закрыт.")
             return redirect(self.request.path)
 
@@ -201,6 +227,29 @@ class PatientUpdate(RoleRequiredMixin, UpdateView):
 
     def get_success_url(self):
         return reverse("web:patient_detail", args=[self.object.id])
+    def form_valid(self, form):
+        old_facility = self.object.facility
+        response = super().form_valid(form)
+        # Логируем изменение места размещения, если оно изменилось
+        log_patient_interaction(
+            patient = self.object,
+            action = "patient_update",
+            user = self.request.user,
+            description = f"Обновлена информация о пациенте ID {self.object.id}",
+        )
+        if old_facility != self.object.facility:
+            old_name = old_facility.name if old_facility else "Без размещения"
+            new_name = self.object.facility.name if self.object.facility else "Без размещения"
+            log_patient_interaction(
+                patient = self.object,
+                action = "facility_update",
+                user = self.request.user,
+                description = f"Изменено место размещения с '{old_name}' на '{new_name}'",
+            )
+        return response
+
+    
+
 
 class AdultPatientList(PatientList):
     def get_queryset(self):

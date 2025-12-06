@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from patients.models import Patient
-
+from django.contrib.auth import get_user_model
 class Encounter(models.Model):
     class Status(models.TextChoices):
         PLANNED="PLANNED","Запланирован"
@@ -52,3 +52,22 @@ class Attachment(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=255, blank=True)
 
+class PatientInteraction(models.Model):
+    ACTIONS = [
+        ("visit_created", "Создан визит"),
+        ("visit_closed", "Закрыт визит"),
+        ("note_add", "Добавлена заметка"),
+        ("rx_add", "Назначение лекарства"),
+        ("patient_update", "Обновлена информация о пациенте"),
+        ("facility_update", "Обновлена информация о месте размещения"),
+    ]
+    patient = models.ForeignKey("patients.Patient", on_delete=models.CASCADE, related_name="interactions")
+    User = get_user_model()
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Пользователь")
+    action = models.CharField(max_length=50, choices=ACTIONS)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-created_at"]
+    def __str__(self):
+        return f"{self.get_action_display()} - {self.patient} at {self.created_at.strftime('%Y-%m-%d %H:%M')}"
