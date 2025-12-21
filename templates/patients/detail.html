@@ -178,18 +178,26 @@
     </div>
 </div>
 {% endif %}
+{% if user.role in "ADMIN DOC REG" %}
+<a href="{% url 'web:patient_certificate' object.id %}" class="btn btn-outline-success ms-2">
+    📄 Отправить справку
+</a>
+{% endif %}
 <hr>
 <h4>История взаимодействий</h4>
 {% if interactions %}
 <ul class="list-group">
     {% for interaction in interactions %}
     <li class="list-group-item">
-        <strong>{{ interaction.get_action_display }}</strong> —
+        <strong>{{ interaction.get_action_display }}</strong>
         {{ interaction.description }} <br>
         <small class="text-muted">
             {{ interaction.created_at|date:"d.m.Y H:i" }}
+            —
             {% if interaction.user %}
-            — {{ interaction.user.get_full_name }}
+            {{ interaction.user }}
+            {% else %}
+            система
             {% endif %}
         </small>
     </li>

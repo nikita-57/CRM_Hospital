@@ -22,6 +22,13 @@ from calendar import monthrange
 from datetime import datetime, date, timedelta
 import calendar
 from clinical.utils import log_patient_interaction
+from django.http import HttpResponse
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from docx import Document
+from django.utils.timezone import now
+import os
+from datetime import date
 
 
 class Dashboard(RoleRequiredMixin, TemplateView):
@@ -107,7 +114,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
 
         # Форма создания визита (без patient и doctor — они будут выставлены в post)
         ctx["encounter_form"] = EncounterForm()
-
+        ctx["interactions"] = patient.interactions.all().order_by("-created_at")
         # Формы заметки и назначения
         default_enc_id = enc_qs[0].id if enc_qs else None
 
@@ -212,7 +219,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
                 patient = self.object,
                 action = "visit_closed",
                 user = request.user,
-                description = f"Закрыт визит ID {enc_id.id}",
+                description = f"Закрыт визит ID {enc_id}",
             )
             messages.success(request, "Визит закрыт.")
             return redirect(self.request.path)
@@ -338,3 +345,35 @@ class StatsView(RoleRequiredMixin, TemplateView):
         ctx["selected_month"] = f"{year}-{month:02d}"
 
         return ctx
+
+class PatientCertificateView(RoleRequiredMixin, DetailView):
+    model = Patient
+    template_name = "patients/certificate.html"
+    allowed_roles = {"ADMIN", "REG", "DOC"}
+
+    def get(self, request, pk):
+        patient = get_object_or_404(Patient, pk=pk)
+        template_path = (
+            settings.BASE_DIR
+            / "templates"
+            / "documents"
+            / "certificate_template.docx"
+        )
+        if not os.path.exists(template_path):
+            print("TEMPLATE PATH:", template_path)
+            raise FileNotFoundError("Шаблон сертификата не найден.")
+        doc = Document(template_path)
+        content = {
+            "{{FULL_NAME}}": f"{patient.last_name} {patient.first_name} {patient.middle_name or ''}".strip(),
+            "{{DOCUMENT_ID}}": patient.document_id or "N/A",
+            "{{ISSUE_DATE}}": now().strftime("%d.%m.%Y"),
+        }
+        for paragraph in doc.paragraphs:
+            for key, value in content.items():
+                if key in paragraph.text:
+                    paragraph.text = paragraph.text.replace(key, value)
+        filename = f"certificate_patient_{patient.id}.docx"
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = f'attachment; filename={filename}'
+        doc.save(response)
+        return response
