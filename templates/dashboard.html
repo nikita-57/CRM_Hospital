@@ -1,6 +1,50 @@
 {% extends "base.html" %}
+{% load dict_extras %}
 {% block title %}Главная — MedCRM{% endblock %}
+
 {% block content %}
 <h3>Добро пожаловать!</h3>
 <p>Используйте меню сверху для навигации.</p>
+
+<h4 class="mt-4">Врачи и нагрузка</h4>
+
+<table class="table table-bordered table-sm align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>Врач</th>
+            <th>Отделение</th>
+            <th>Всего пациентов</th>
+            {% for d in days %}
+            <th>{{ d|date:"d.m" }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for doc in doctors %}
+        <tr>
+            <td>{{ doc.get_full_name }}</td>
+            <td>{{ doc.get_department_display }}</td>
+            <td class="text-center">
+                <span class="badge bg-primary">
+                    {{ doc.patients_count }}
+                </span>
+            </td>
+
+            {% for d in days %}
+            <td class="text-center">
+                {% with doc_load=load_map|get_item:doc.id %}
+                {{ doc_load|get_item:d|default:"—" }}
+                {% endwith %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="100%" class="text-muted text-center">
+                Врачи не найдены
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

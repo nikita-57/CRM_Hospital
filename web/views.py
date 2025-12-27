@@ -1,5 +1,5 @@
-# web/views.py
 from django.views import View
+from django.db.models.functions import TruncDate
 from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -28,8 +28,7 @@ from django.shortcuts import get_object_or_404
 from docx import Document
 from django.utils.timezone import now
 import os
-from datetime import date
-
+from accounts.models import User
 
 class Dashboard(RoleRequiredMixin, TemplateView):
     template_name = "dashboard.html"
@@ -377,3 +376,51 @@ class PatientCertificateView(RoleRequiredMixin, DetailView):
         response['Content-Disposition'] = f'attachment; filename={filename}'
         doc.save(response)
         return response
+
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
+from django.utils.timezone import now, timedelta
+from django.db.models.functions import TruncDate
+
+class Dashboard(LoginRequiredMixin, TemplateView):
+    template_name = "dashboard.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role != "REG":
+            return redirect("web:patients")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        days = [(now().date() - timedelta(days=i)) for i in range(6, -1, -1)]
+        ctx["days"] = days
+
+        doctors = (
+            User.objects
+            .filter(role="DOC", is_active=True)
+            .annotate(
+                patients_count=Count(
+                    "encounters__patient",
+                    distinct=True,
+                    filter=Q(encounters__patient__is_active=True)
+                )
+            )
+        )
+
+        ctx["doctors"] = doctors
+
+        load_map = {}
+
+        for doc in doctors:
+            daily = (
+                doc.encounters
+                .annotate(day=TruncDate("started_at"))
+                .values("day")
+                .annotate(cnt=Count("id"))
+            )
+            load_map[doc.id] = {d["day"]: d["cnt"] for d in daily}
+
+        ctx["load_map"] = load_map
+        return ctx
