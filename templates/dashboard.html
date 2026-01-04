@@ -1,22 +1,71 @@
 {% extends "base.html" %}
-{% load dict_extras %}
 {% block title %}Главная — MedCRM{% endblock %}
 
 {% block content %}
+
 <h3>Добро пожаловать!</h3>
-<p>Используйте меню сверху для навигации.</p>
+<p class="text-muted">Общая сводка по врачам и пациентам</p>
 
-<h4 class="mt-4">Врачи и нагрузка</h4>
+<!-- KPI -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Врачи</h6>
+                <h3>{{ doctors_count }}</h3>
+            </div>
+        </div>
+    </div>
 
-<table class="table table-bordered table-sm align-middle">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Всего пациентов</h6>
+                <h3>{{ patients_total }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Взрослые</h6>
+                <h3>{{ patients_adult }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Дети</h6>
+                <h3>{{ patients_child }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Неопределённые</h6>
+                <h3>{{ patients_unknown }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица врачей -->
+<h4>Нагрузка врачей</h4>
+
+<table class="table table-bordered table-hover align-middle">
     <thead class="table-light">
         <tr>
             <th>Врач</th>
             <th>Отделение</th>
-            <th>Всего пациентов</th>
-            {% for d in days %}
-            <th>{{ d|date:"d.m" }}</th>
-            {% endfor %}
+            <th>Взрослые</th>
+            <th>Дети</th>
+            <th>Неопр.</th>
+            <th>Всего</th>
         </tr>
     </thead>
     <tbody>
@@ -24,27 +73,23 @@
         <tr>
             <td>{{ doc.get_full_name }}</td>
             <td>{{ doc.get_department_display }}</td>
-            <td class="text-center">
+            <td>{{ doc.adult_patients }}</td>
+            <td>{{ doc.child_patients }}</td>
+            <td>{{ doc.unknown_patients }}</td>
+            <td>
                 <span class="badge bg-primary">
-                    {{ doc.patients_count }}
+                    {{ doc.total_patients }}
                 </span>
             </td>
-
-            {% for d in days %}
-            <td class="text-center">
-                {% with doc_load=load_map|get_item:doc.id %}
-                {{ doc_load|get_item:d|default:"—" }}
-                {% endwith %}
-            </td>
-            {% endfor %}
         </tr>
         {% empty %}
         <tr>
-            <td colspan="100%" class="text-muted text-center">
+            <td colspan="6" class="text-center text-muted">
                 Врачи не найдены
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+
 {% endblock %}

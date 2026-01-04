@@ -1,5 +1,6 @@
 from django.db import models
 from datetime import date
+from django.conf import settings
 
 # Справочник отделений (лучше вынести в начало файла)
 DEPARTMENT_CHOICES = [
@@ -57,6 +58,14 @@ class Patient(models.Model):
         max_length=20,
         choices = DEPARTMENT_CHOICES,
         default = "therapy",
+    )
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={"role": "DOC"},
+        related_name="patients"
     )
     facility = models.ForeignKey(
         Facility,

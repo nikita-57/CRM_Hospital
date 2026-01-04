@@ -4,7 +4,7 @@ from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Count
 from django.utils import timezone
 from django.views.generic import UpdateView
 from django.urls import reverse
@@ -13,7 +13,6 @@ from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm
 from patients.models import Patient, DEPARTMENT_CHOICES, Facility
 from clinical.models import Encounter, Note, Prescription
 from .mixins import RoleRequiredMixin, PatientFilterMixin
-from django.db.models import Count
 from django.db.models.functions import TruncWeek, TruncMonth, TruncDay
 from django.db import models
 from django.views.generic import TemplateView
@@ -24,16 +23,13 @@ import calendar
 from clinical.utils import log_patient_interaction
 from django.http import HttpResponse
 from django.conf import settings
-from django.shortcuts import get_object_or_404
 from docx import Document
 from django.utils.timezone import now
 import os
 from accounts.models import User
-
-class Dashboard(RoleRequiredMixin, TemplateView):
-    template_name = "dashboard.html"
-
-
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.utils.timezone import now, timedelta
+from django.db.models.functions import TruncDate
 
 class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
     model = Patient
@@ -377,50 +373,43 @@ class PatientCertificateView(RoleRequiredMixin, DetailView):
         doc.save(response)
         return response
 
-from django.views.generic import TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
-from django.utils.timezone import now, timedelta
-from django.db.models.functions import TruncDate
 
-class Dashboard(LoginRequiredMixin, TemplateView):
+
+class Dashboard(RoleRequiredMixin, TemplateView):
     template_name = "dashboard.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.role != "REG":
-            return redirect("web:patients")
-        return super().dispatch(request, *args, **kwargs)
+    allowed_roles = {"REG"}
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
-        days = [(now().date() - timedelta(days=i)) for i in range(6, -1, -1)]
-        ctx["days"] = days
-
+        # --- Врачи ---
         doctors = (
             User.objects
             .filter(role="DOC", is_active=True)
             .annotate(
-                patients_count=Count(
-                    "encounters__patient",
-                    distinct=True,
-                    filter=Q(encounters__patient__is_active=True)
-                )
+                total_patients=Count("patients", filter=Q(patients__is_active=True)),
+                adult_patients=Count(
+                    "patients",
+                    filter=Q(patients__patient_type="adult", patients__is_active=True)
+                ),
+                child_patients=Count(
+                    "patients",
+                    filter=Q(patients__patient_type="child", patients__is_active=True)
+                ),
+                unknown_patients=Count(
+                    "patients",
+                    filter=Q(patients__patient_type="unknown", patients__is_active=True)
+                ),
             )
+            .order_by("last_name")
         )
 
+        # --- KPI ---
+        ctx["doctors_count"] = doctors.count()
+        ctx["patients_total"] = Patient.objects.filter(is_active=True).count()
+        ctx["patients_adult"] = Patient.objects.filter(patient_type="adult", is_active=True).count()
+        ctx["patients_child"] = Patient.objects.filter(patient_type="child", is_active=True).count()
+        ctx["patients_unknown"] = Patient.objects.filter(patient_type="unknown", is_active=True).count()
+
         ctx["doctors"] = doctors
-
-        load_map = {}
-
-        for doc in doctors:
-            daily = (
-                doc.encounters
-                .annotate(day=TruncDate("started_at"))
-                .values("day")
-                .annotate(cnt=Count("id"))
-            )
-            load_map[doc.id] = {d["day"]: d["cnt"] for d in daily}
-
-        ctx["load_map"] = load_map
         return ctx
