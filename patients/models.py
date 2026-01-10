@@ -1,6 +1,7 @@
 from django.db import models
 from datetime import date
-
+from django.conf import settings
+from django.db import models
 # Справочник отделений (лучше вынести в начало файла)
 DEPARTMENT_CHOICES = [
     ("cardiology", "Кардиология"),
@@ -58,6 +59,16 @@ class Patient(models.Model):
         choices = DEPARTMENT_CHOICES,
         default = "therapy",
     )
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={"role": "doctor"},
+        verbose_name="Лечащий врач",
+        related_name="patients",
+    )
+    
     facility = models.ForeignKey(
         Facility,
         verbose_name="Место размещения",
