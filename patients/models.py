@@ -1,8 +1,7 @@
 from django.db import models
 from datetime import date
 from django.conf import settings
-from django.db import models
-# Справочник отделений (лучше вынести в начало файла)
+
 DEPARTMENT_CHOICES = [
     ("cardiology", "Кардиология"),
     ("therapy", "Терапия"),

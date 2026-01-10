@@ -3,6 +3,7 @@ from django import forms
 from datetime import date
 from patients.models import Patient
 from clinical.models import Encounter, Note, Prescription
+from accounts.models import User
 
 class PatientForm(forms.ModelForm):
     class Meta:
@@ -12,7 +13,7 @@ class PatientForm(forms.ModelForm):
             "birth_date", "gender","patient_type",
             "phone", "email",
             "document_id", "insurance_number",
-            "department", "facility",
+            "department", "facility", "doctor",
             "address", "emergency_contact",
         ]
         widgets = {
@@ -50,6 +51,7 @@ class PatientForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["birth_date"].widget.attrs.setdefault("data-max", date.today().isoformat())
+        self.fields["doctor"].widget.attrs.update({"class": "form-select"})
 
 class EncounterForm(forms.ModelForm):
     started_at = forms.DateTimeField(
