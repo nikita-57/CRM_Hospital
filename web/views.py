@@ -73,15 +73,27 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
         ctx["facilities"] = Facility.objects.all()
         return ctx
     
-
-
-
-
 class PatientCreate(RoleRequiredMixin, CreateView):
     form_class = PatientForm
     template_name = "patients/create.html"
     success_url = reverse_lazy("web:patients")
     allowed_roles = {"ADMIN", "REG"}
+
+    def form_valid(self, form):
+        # 1. Сохраняем объект, но пока не в базу (commit=False), 
+        # если захотите добавить какую-то автоматическую логику
+        self.object = form.save()
+
+        from clinical.utils import log_patient_interaction
+        log_patient_interaction(
+            patient=self.object,
+            action="patient_created",
+            user=self.request.user,
+            description=f"Создан новый пациент: {self.object.last_name} {self.object.first_name}. Лечащий врач: {self.object.doctor}",
+        )
+        
+        messages.success(self.request, "Пациент успешно создан и прикреплен к врачу.")
+        return super().form_valid(form)
 
 
 class PatientDetail(RoleRequiredMixin, DetailView):
@@ -413,3 +425,20 @@ class Dashboard(RoleRequiredMixin, TemplateView):
 
         ctx["doctors"] = doctors
         return ctx
+    
+from django.http import JsonResponse
+from accounts.models import User
+
+def get_doctors_by_department(request):
+    department = request.GET.get('department')
+    # Фильтруем: роль 'DOC' и точное совпадение ключа отделения
+    doctors = User.objects.filter(role="DOC", department=department)
+    
+    # Формируем список словарей
+    doctors_list = [
+        {
+            'id': doc.id, 
+            'full_name': doc.get_full_name() or doc.username
+        } for doc in doctors
+    ]
+    return JsonResponse(doctors_list, safe=False)

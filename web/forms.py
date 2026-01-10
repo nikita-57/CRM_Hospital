@@ -9,12 +9,10 @@ class PatientForm(forms.ModelForm):
     class Meta:
         model = Patient
         fields = [
-            "last_name", "first_name", "middle_name",
-            "birth_date", "gender","patient_type",
-            "phone", "email",
-            "document_id", "insurance_number",
-            "department", "facility", "doctor",
-            "address", "emergency_contact",
+            'last_name', 'first_name', 'middle_name', 
+            'birth_date', 'gender', 'patient_type', 
+            'facility', 'department', 'doctor',
+            'phone', 'insurance_number', 'document_id', 'address'
         ]
         widgets = {
             "birth_date": forms.DateInput(

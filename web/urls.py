@@ -2,7 +2,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import Dashboard, PatientList, PatientCreate, PatientDetail, PatientSoftDelete, PatientRestore, PatientUpdate, AdultPatientList, ChildrenPatients, StatsView
 from .views import PatientCertificateView
-
+from . import views
 app_name = "web"
 
 urlpatterns = [
@@ -19,5 +19,6 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("stats/departments/", StatsView.as_view(), name="departments"),
     path("patients/<int:pk>/certificate/", PatientCertificateView.as_view(), name="patient_certificate"),
+    path('api/get-doctors/', views.get_doctors_by_department, name='api_get_doctors'),
 
 ]

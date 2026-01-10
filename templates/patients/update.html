@@ -2,8 +2,8 @@
 {% block title %}Редактирование пациента — MedCRM{% endblock %}
 {% block content %}
 
-<h3>Редактирование пациента</h3>
-<form method="post">
+<h3>Редактирование пациента: {{ object.last_name }} {{ object.first_name }}</h3>
+<form method="post" id="patientForm">
     {% csrf_token %}
     <div class="row mb-2">
         <div class="col-md-4">{{ form.last_name.label_tag }} {{ form.last_name }}</div>
@@ -16,24 +16,66 @@
         <div class="col-md-4">{{ form.gender.label_tag }} {{ form.gender }}</div>
         <div class="col-md-4">{{ form.patient_type.label_tag }} {{ form.patient_type }}</div>
     </div>
+
     <div class="row mb-2">
-        <div class="col-md-6">{{ form.facility.label_tag }} {{ form.facility }}</div>
-        <div class="col-md-6">{{ form.department.label_tag }} {{ form.department }}</div>
+        <div class="col-md-4">{{ form.facility.label_tag }} {{ form.facility }}</div>
+        <div class="col-md-4">{{ form.department.label_tag }} {{ form.department }}</div>
+        <div class="col-md-4">{{ form.doctor.label_tag }} {{ form.doctor }}</div>
     </div>
+
     <div class="row mb-2">
         <div class="col-md-6">{{ form.phone.label_tag }} {{ form.phone }}</div>
         <div class="col-md-6">{{ form.insurance_number.label_tag }} {{ form.insurance_number }}</div>
     </div>
-    <div class="row mb-2">
-        <div class="col-md-12">{{ form.document_id.label_tag }} {{ form.document_id }}</div>
-    </div>
 
     <div class="row mb-2">
-        <div class="col-md-12">{{ form.department.label_tag }} {{ form.department }}</div>
+        <div class="col-md-12">{{ form.document_id.label_tag }} {{ form.document_id }}</div>
     </div>
 
     <button class="btn btn-primary mt-2" type="submit">Сохранить</button>
     <a class="btn btn-secondary mt-2" href="{% url 'web:patient_detail' object.id %}">Отмена</a>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Используем ID, которые Django назначает полям по умолчанию
+        const deptField = document.getElementById('id_department');
+        const docField = document.getElementById('id_doctor');
+
+        if (!deptField || !docField) return;
+
+        function refreshDoctors(deptValue, selectedId = null) {
+            console.log("Запрос врачей для отделения:", deptValue);
+
+            // Очищаем список, оставляя только пустую строку
+            docField.innerHTML = '<option value="">---------</option>';
+
+            if (!deptValue) return;
+
+            fetch("{% url 'web:api_get_doctors' %}?department=" + deptValue)
+                .then(res => res.json())
+                .then(data => {
+                    console.log("Получено врачей:", data.length);
+                    data.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.id;
+                        opt.textContent = d.full_name;
+                        if (selectedId && d.id == selectedId) opt.selected = true;
+                        docField.appendChild(opt);
+                    });
+                })
+                .catch(err => console.error("Ошибка AJAX:", err));
+        }
+
+        deptField.addEventListener('change', function () {
+            refreshDoctors(this.value);
+        });
+
+        if (deptField.value) {
+            const currentDoctorId = docField.value;
+            refreshDoctors(deptField.value, currentDoctorId);
+        }
+    });
+</script>
 
 {% endblock %}

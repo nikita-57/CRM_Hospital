@@ -63,7 +63,7 @@ class Patient(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        limit_choices_to={"role": "doctor"},
+        limit_choices_to={"role": "DOC"},
         verbose_name="Лечащий врач",
         related_name="patients",
     )

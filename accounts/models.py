@@ -2,10 +2,10 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 DEPARTMENTS = [
-    ("cardio", "Кардиология"),
+    ("cardiology", "Кардиология"),
     ("therapy", "Терапия"),
-    ("neuro", "Неврология"),
-    ("psy", "Психиатрия"),
+    ("psychiatry", "Психиатрия"),
+    ("neurology", "Неврология"),
 ]
 
 class User(AbstractUser):
