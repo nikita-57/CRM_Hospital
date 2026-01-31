@@ -12,7 +12,7 @@ class PatientForm(forms.ModelForm):
             'last_name', 'first_name', 'middle_name', 
             'birth_date', 'gender', 'patient_type', 
             'facility', 'department', 'doctor',
-            'phone', 'insurance_number', 'document_id', 'address'
+            'phone','employer', 'insurance_number', 'document_id', 'address'
         ]
         widgets = {
             "birth_date": forms.DateInput(

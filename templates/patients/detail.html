@@ -56,6 +56,9 @@
             <td>{{ object.birth_date|date:"d.m.Y" }} ({{ object.age }} лет)</td>
         </tr>
         <tr>
+            <th>Место работы</th>
+            <td>{{ object.employer|default:"—" }}</td>
+        <tr>
             <th>Телефон</th>
             <td>{{ object.phone|default:"—" }}</td>
         </tr>

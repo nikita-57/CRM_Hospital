@@ -30,6 +30,7 @@ from accounts.models import User
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.timezone import now, timedelta
 from django.db.models.functions import TruncDate
+from django.utils.encoding import escape_uri_path
 
 class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
     model = Patient
@@ -372,6 +373,9 @@ class PatientCertificateView(RoleRequiredMixin, DetailView):
         doc = Document(template_path)
         content = {
             "{{FULL_NAME}}": f"{patient.last_name} {patient.first_name} {patient.middle_name or ''}".strip(),
+            "{{BIRTH_DATE}}": patient.birth_date.strftime("%d.%m.%Y") if patient.birth_date else "N/A",
+            "{{AGE}}": str(patient.age) if patient.age is not None else "N/A",
+            "{{DEPARTMENT}}": dict(DEPARTMENT_CHOICES).get(patient.department, "N/A"),
             "{{DOCUMENT_ID}}": patient.document_id or "N/A",
             "{{ISSUE_DATE}}": now().strftime("%d.%m.%Y"),
         }
@@ -379,13 +383,12 @@ class PatientCertificateView(RoleRequiredMixin, DetailView):
             for key, value in content.items():
                 if key in paragraph.text:
                     paragraph.text = paragraph.text.replace(key, value)
-        filename = f"certificate_patient_{patient.id}.docx"
+        filename = f"Справка_пациента_{patient.first_name}_{patient.last_name}.docx" 
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        response['Content-Disposition'] = f'attachment; filename={filename}'
+        encoded_filename = escape_uri_path(filename)
+        response['Content-Disposition'] = f'attachment; filename="{encoded_filename}"'
         doc.save(response)
         return response
-
-
 
 class Dashboard(RoleRequiredMixin, TemplateView):
     template_name = "dashboard.html"
