@@ -1,46 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Новый пациент — MedCRM{% endblock %}
 {% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Новый пациент</h1>
+        <p class="page-subtitle">Заполните данные пациента для создания карточки</p>
+    </div>
+</div>
 
-<h3>Новый пациент</h3>
-<form method="post">
+<form method="post" class="card-surface">
     {% csrf_token %}
-
-    <div class="row mb-2">
+    <div class="row g-3">
         <div class="col-md-4">{{ form.last_name.label_tag }} {{ form.last_name }}</div>
         <div class="col-md-4">{{ form.first_name.label_tag }} {{ form.first_name }}</div>
         <div class="col-md-4">{{ form.middle_name.label_tag }} {{ form.middle_name }}</div>
-    </div>
 
-    <div class="row mb-2">
         <div class="col-md-4">{{ form.birth_date.label_tag }} {{ form.birth_date }}</div>
         <div class="col-md-4">{{ form.gender.label_tag }} {{ form.gender }}</div>
         <div class="col-md-4">{{ form.patient_type.label_tag }} {{ form.patient_type }}</div>
-    </div>
 
-    <div class="row mb-2">
         <div class="col-md-4">{{ form.facility.label_tag }} {{ form.facility }}</div>
         <div class="col-md-4">{{ form.department.label_tag }} {{ form.department }}</div>
         <div class="col-md-4">{{ form.doctor.label_tag }} {{ form.doctor }}</div>
-    </div>
 
-    <div class="row mb-2">
-        <div class="col-md-6">{{ form.phone.label_tag }} {{ form.phone }}</div>
-        <div class="col-md-6">{{ form.employer.label_tag }} {{ form.employer }}</div>
-        <div class="col-md-6">{{ form.insurance_number.label_tag }} {{ form.insurance_number }}</div>
-    </div>
+        <div class="col-md-4">{{ form.phone.label_tag }} {{ form.phone }}</div>
+        <div class="col-md-4">{{ form.employer.label_tag }} {{ form.employer }}</div>
+        <div class="col-md-4">{{ form.insurance_number.label_tag }} {{ form.insurance_number }}</div>
 
-    <div class="row mb-2">
-        <div class="col-md-6">{{ form.document_id.label_tag }} {{ form.document_id }}</div>
-        <div class="col-md-6">{{ form.address.label_tag }} {{ form.address }}</div>
-    </div>
+        <div class="col-md-4">{{ form.document_id.label_tag }} {{ form.document_id }}</div>
+        <div class="col-md-4">{{ form.callsign.label_tag }} {{ form.callsign }}</div>
+        <div class="col-md-4">{{ form.address.label_tag }} {{ form.address }}</div>
 
-    <div class="row mb-2">
         <div class="col-md-12">{{ form.emergency_contact.label_tag }} {{ form.emergency_contact }}</div>
     </div>
 
-    <button class="btn btn-success mt-2" type="submit">Сохранить</button>
-    <a class="btn btn-secondary mt-2" href="{% url 'web:patients' %}">Отмена</a>
+    <div class="d-flex justify-content-end gap-2 mt-4">
+        <a class="btn btn-ghost" href="{% url 'web:patients' %}">Отмена</a>
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const departmentSelect = document.querySelector('select[name="department"]');
@@ -49,24 +47,17 @@
             if (departmentSelect && doctorSelect) {
                 departmentSelect.addEventListener('change', function () {
                     const dept = this.value;
-                    console.log("Выбрано отделение:", dept); // Проверка в консоли браузера
-
                     doctorSelect.innerHTML = '<option value="">---------</option>';
                     if (!dept) return;
 
-                    // Используем динамический URL через тег url для надежности
                     const url = `{% url 'web:api_get_doctors' %}?department=${dept}`;
 
                     fetch(url)
                         .then(response => {
-                            if (!response.ok) throw new Error('Ошибка сети');
+                            if (!response.ok) throw new Error('Network error');
                             return response.json();
                         })
                         .then(data => {
-                            console.log("Получены врачи:", data); // Проверка ответа
-                            if (data.length === 0) {
-                                console.warn("Врачи для этого отделения не найдены в БД");
-                            }
                             data.forEach(doctor => {
                                 const option = document.createElement('option');
                                 option.value = doctor.id;
@@ -74,11 +65,10 @@
                                 doctorSelect.appendChild(option);
                             });
                         })
-                        .catch(error => console.error('Ошибка fetch:', error));
+                        .catch(error => console.error('Fetch error:', error));
                 });
             }
         });
     </script>
 </form>
-
 {% endblock %}

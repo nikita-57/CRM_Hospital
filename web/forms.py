@@ -12,7 +12,7 @@ class PatientForm(forms.ModelForm):
             'last_name', 'first_name', 'middle_name', 
             'birth_date', 'gender', 'patient_type', 
             'facility', 'department', 'doctor',
-            'phone','employer', 'insurance_number', 'document_id', 'address'
+            'phone', 'employer', 'callsign', 'insurance_number', 'document_id', 'address'
         ]
         widgets = {
             "birth_date": forms.DateInput(
@@ -41,6 +41,7 @@ class PatientForm(forms.ModelForm):
             "gender": forms.Select(attrs={"class": "form-select"}),
             "document_id": forms.TextInput(attrs={"class": "form-control"}),
             "insurance_number": forms.TextInput(attrs={"class": "form-control"}),
+            "callsign": forms.TextInput(attrs={"class": "form-control"}),
             "address": forms.TextInput(attrs={"class": "form-control"}),
             "emergency_contact": forms.TextInput(attrs={"class": "form-control"}),
             "department": forms.Select(attrs={"class": "form-select"}),

@@ -1,145 +1,157 @@
 {% extends "base.html" %}
 {% block title %}Карточка пациента — MedCRM{% endblock %}
 {% block content %}
-
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'web:patients' %}">Пациенты</a></li>
-        <li class="breadcrumb-item">{{ object.get_department_display }}</li>
-        <li class="breadcrumb-item active" aria-current="page">
-            {{ object.last_name }} {{ object.first_name }}
-        </li>
-    </ol>
-</nav>
-
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <h3>{{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
-    </h3>
-
-    {% if user.role in "ADMIN DOC NUR REG" %}
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#encounterModal">+ Новый визит</button>
-    {% endif %}
-</div>
-
-{% if user.role == "REG" %}
-<a href="{% url 'web:patient_update' object.id %}" class="btn btn-warning mb-3">✏ Редактировать</a>
-{% endif %}
-
-<table class="table table-bordered">
-    <tbody>
-        <tr>
-            <th>Статус</th>
-            <td>
-                {% if object.is_active %}
-                <span class="badge bg-success">Активен</span>
-                {% else %}
-                <span class="badge bg-secondary">Скрыт</span>
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th>Отделение</th>
-            <td>{{ object.get_department_display }}</td>
-        </tr>
-        <tr>
-            <th>Тип пациента</th>
-            <td>
-                {% if object.patient_type == "child" %}
-                Ребёнок
-                {% else %}
-                Взрослый
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th>Дата рождения</th>
-            <td>{{ object.birth_date|date:"d.m.Y" }} ({{ object.age }} лет)</td>
-        </tr>
-        <tr>
-            <th>Место работы</th>
-            <td>{{ object.employer|default:"—" }}</td>
-        <tr>
-            <th>Телефон</th>
-            <td>{{ object.phone|default:"—" }}</td>
-        </tr>
-        <tr>
-            <th>Полис</th>
-            <td>{{ object.insurance_number|default:"—" }}</td>
-        </tr>
-    </tbody>
-</table>
-
-<hr>
-
-<div class="row">
-    <div class="col-md-7">
-        {% if encounters %}
-        {% for e in encounters %}
-        <div class="border rounded p-2 mb-2">
-            <b>{{ e.started_at|date:"d.m.Y H:i" }}</b> — {{ e.get_status_display }}
-            {% if e.reason %} — {{ e.reason }}{% endif %}
-
-            {% if not e.finished_at and user.role in "ADMIN DOC NUR" %}
-            <form method="post" class="d-inline ms-2">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="close_encounter">
-                <input type="hidden" name="encounter_id" value="{{ e.id }}">
-                <button class="btn btn-sm btn-outline-secondary">Закрыть визит</button>
-            </form>
-            {% endif %}
-
-            {% if e.notes.all %}
-            <div class="mt-2">
-                <b>Заметки:</b>
-                <ul class="mb-1">
-                    {% for n in e.notes.all %}
-                    <li>{{ n.created_at|date:"d.m.Y H:i" }} — {{ n.text }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
-            {% if e.prescriptions.all %}
-            <div>
-                <b>Назначения:</b>
-                <ul class="mb-1">
-                    {% for rx in e.prescriptions.all %}
-                    <li>{{ rx.medication }} — {{ rx.dosage }}, {{ rx.frequency }}, {{ rx.duration_days }} дн.</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
-        {% else %}
-        <p class="text-muted">Пока нет визитов.</p>
+<div class="page-header">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'web:patients' %}">Пациенты</a></li>
+                <li class="breadcrumb-item">{{ object.get_department_display }}</li>
+                <li class="breadcrumb-item active" aria-current="page">
+                    {{ object.last_name }} {{ object.first_name }}
+                </li>
+            </ol>
+        </nav>
+        <h1 class="page-title">
+            {{ object.last_name }} {{ object.first_name }}{% if object.middle_name %} {{ object.middle_name }}{% endif %}
+        </h1>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {% if user.role == "REG" %}
+        <a href="{% url 'web:patient_update' object.id %}" class="btn btn-outline-primary">Редактировать</a>
+        {% endif %}
+        {% if user.role in "ADMIN DOC NUR REG" %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#encounterModal">+ Новый визит</button>
+        {% endif %}
+        {% if user.role in "ADMIN DOC REG" %}
+        <a href="{% url 'web:patient_certificate' object.id %}" class="btn btn-ghost">Отправить справку</a>
         {% endif %}
     </div>
+</div>
 
-    <div class="col-md-5">
-        {% if user.role in "ADMIN DOC NUR REG" %}
-        <div class="card mb-3">
-            <div class="card-body">
-                <h6>Добавить заметку</h6>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_note">
-                    {{ note_form.as_p }}
-                    <button class="btn btn-outline-primary w-100">Добавить</button>
-                </form>
-            </div>
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card-surface mb-3">
+            <h5 class="mb-3">Данные пациента</h5>
+            <table class="table mb-0">
+                <tbody>
+                    <tr>
+                        <th>Статус</th>
+                        <td>
+                            {% if object.is_active %}
+                            <span class="badge bg-success">Активен</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Скрыт</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Отделение</th>
+                        <td>{{ object.get_department_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>Тип пациента</th>
+                        <td>
+                            {% if object.patient_type == "child" %}
+                            Ребенок
+                            {% else %}
+                            Взрослый
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Дата рождения</th>
+                        <td>{{ object.birth_date|date:"d.m.Y" }} ({{ object.age }} лет)</td>
+                    </tr>
+                    <tr>
+                        <th>Место работы</th>
+                        <td>{{ object.employer|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Телефон</th>
+                        <td>{{ object.phone|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Позывной</th>
+                        <td>{{ object.callsign|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Полис</th>
+                        <td>{{ object.insurance_number|default:"—" }}</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
-        <div class="card">
-            <div class="card-body">
-                <h6>Добавить назначение</h6>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="add_rx">
-                    {{ rx_form.as_p }}
-                    <button class="btn btn-outline-success w-100">Добавить</button>
-                </form>
+        <div class="card-surface">
+            <h5 class="mb-3">История визитов</h5>
+            {% if encounters %}
+            {% for e in encounters %}
+            <div class="border rounded-3 p-3 mb-3">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <div>
+                        <strong>{{ e.started_at|date:"d.m.Y H:i" }}</strong> — {{ e.get_status_display }}
+                        {% if e.reason %} — {{ e.reason }}{% endif %}
+                    </div>
+                    {% if not e.finished_at and user.role in "ADMIN DOC NUR" %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="close_encounter">
+                        <input type="hidden" name="encounter_id" value="{{ e.id }}">
+                        <button class="btn btn-sm btn-outline-primary">Закрыть визит</button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                {% if e.notes.all %}
+                <div class="mt-3">
+                    <strong>Заметки</strong>
+                    <ul class="mb-1">
+                        {% for n in e.notes.all %}
+                        <li>{{ n.created_at|date:"d.m.Y H:i" }} — {{ n.text }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if e.prescriptions.all %}
+                <div>
+                    <strong>Назначения</strong>
+                    <ul class="mb-1">
+                        {% for rx in e.prescriptions.all %}
+                        <li>{{ rx.medication }} — {{ rx.dosage }}, {{ rx.frequency }}, {{ rx.duration_days }} дн.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
             </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted mb-0">Пока нет визитов.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        {% if user.role in "ADMIN DOC NUR REG" %}
+        <div class="card-surface mb-3">
+            <h6 class="mb-3">Добавить заметку</h6>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_note">
+                {{ note_form.as_p }}
+                <button class="btn btn-outline-primary w-100">Добавить</button>
+            </form>
+        </div>
+
+        <div class="card-surface">
+            <h6 class="mb-3">Добавить назначение</h6>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_rx">
+                {{ rx_form.as_p }}
+                <button class="btn btn-outline-primary w-100">Добавить</button>
+            </form>
         </div>
         {% endif %}
     </div>
@@ -181,32 +193,29 @@
     </div>
 </div>
 {% endif %}
-{% if user.role in "ADMIN DOC REG" %}
-<a href="{% url 'web:patient_certificate' object.id %}" class="btn btn-outline-success ms-2">
-    📄 Отправить справку
-</a>
-{% endif %}
-<hr>
-<h4>История взаимодействий</h4>
-{% if interactions %}
-<ul class="list-group">
-    {% for interaction in interactions %}
-    <li class="list-group-item">
-        <strong>{{ interaction.get_action_display }}</strong>
-        {{ interaction.description }} <br>
-        <small class="text-muted">
-            {{ interaction.created_at|date:"d.m.Y H:i" }}
-            —
-            {% if interaction.user %}
-            {{ interaction.user }}
-            {% else %}
-            система
-            {% endif %}
-        </small>
-    </li>
-    {% endfor %}
-</ul>
-{% else %}
-<p class="text-muted">Нет взаимодействий.</p>
-{% endif %}
+
+<div class="card-surface mt-4">
+    <h5 class="mb-3">История взаимодействий</h5>
+    {% if interactions %}
+    <ul class="list-group">
+        {% for interaction in interactions %}
+        <li class="list-group-item">
+            <strong>{{ interaction.get_action_display }}</strong>
+            {{ interaction.description }} <br>
+            <small class="text-muted">
+                {{ interaction.created_at|date:"d.m.Y H:i" }}
+                —
+                {% if interaction.user %}
+                {{ interaction.user }}
+                {% else %}
+                система
+                {% endif %}
+            </small>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted mb-0">Нет взаимодействий.</p>
+    {% endif %}
+</div>
 {% endblock %}

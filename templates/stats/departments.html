@@ -1,66 +1,76 @@
 {% extends "base.html" %}
 {% block title %}Статистика отделений — MedCRM{% endblock %}
 {% block content %}
-<h3 class="mb-3">Загруженность отделений</h3>
-
-<form class="row g-2 mb-4" method="get">
-    <div class="col-auto">
-        <select name="period" class="form-select">
-            <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>По месяцам</option>
-        </select>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Загруженность отделений</h1>
+        <p class="page-subtitle">Отчеты по визитам и активности за период</p>
     </div>
+</div>
 
-    <!-- Выбор месяца -->
-    <div class="col-auto">
-        <input type="month" name="month" class="form-control"
-               value="{{ request.GET.month }}">
-    </div>
-
-    <!-- Отделение -->
-    <div class="col-auto">
-        <select name="department" class="form-select">
-            <option value="">Все отделения</option>
-            {% for code, name in departments %}
-            <option value="{{ code }}" {% if request.GET.department == code %}selected{% endif %}>{{ name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div class="col-auto">
-        <button class="btn btn-outline-primary">Показать</button>
-    </div>
-</form>
+<div class="card-surface mb-4">
+    <form class="row g-3 align-items-end" method="get">
+        <div class="col-lg-3">
+            <label class="form-label">Период</label>
+            <select name="period" class="form-select">
+                <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>По месяцам</option>
+            </select>
+        </div>
+        <div class="col-lg-3">
+            <label class="form-label">Месяц</label>
+            <input type="month" name="month" class="form-control" value="{{ request.GET.month }}">
+        </div>
+        <div class="col-lg-4">
+            <label class="form-label">Отделение</label>
+            <select name="department" class="form-select">
+                <option value="">Все отделения</option>
+                {% for code, name in departments %}
+                <option value="{{ code }}" {% if request.GET.department == code %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2">
+            <button class="btn btn-outline-primary w-100">Показать</button>
+        </div>
+    </form>
+</div>
 
 {% if table %}
-<table class="table table-bordered table-sm">
-    <thead>
-        <tr>
-            <th>ФИО</th>
-            <th>Личный номер</th>
-            {% for day in dates %}
-                <th class="text-center">{{ day }}</th>
-            {% endfor %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in table %}
-        <tr>
-            <td>{{ row.fio }}</td>
-            <td>{{ row.document_id }}</td>
-            {% for visit in row.visits %}
-                <td class="text-center">
-                    {% if visit > 0 %}
+<div class="card-surface p-0">
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>ФИО</th>
+                    <th>Личный номер</th>
+                    {% for day in dates %}
+                    <th class="text-center">{{ day }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table %}
+                <tr>
+                    <td>{{ row.fio }}</td>
+                    <td>{{ row.document_id }}</td>
+                    {% for visit in row.visits %}
+                    <td class="text-center">
+                        {% if visit > 0 %}
                         ✓
-                    {% else %}
+                        {% else %}
                         —
-                    {% endif %}
-                </td>
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% else %}
-<p class="text-muted">Нет данных для отображения.</p>
+<div class="card-surface">
+    <p class="text-muted mb-0">Нет данных для отображения.</p>
+</div>
 {% endif %}
 {% endblock %}

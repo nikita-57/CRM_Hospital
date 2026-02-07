@@ -81,6 +81,7 @@ class Patient(models.Model):
     document_id = models.CharField("Личный номер", max_length=64, blank=True)
     insurance_number = models.CharField("Полис", max_length=64, blank=True)
     employer = models.CharField("Место работы", max_length=255, blank=True)
+    callsign = models.CharField("Позывной", max_length=64, blank=True)
     address = models.CharField("Адрес", max_length=255, blank=True)
     emergency_contact = models.CharField("Контакт для связи", max_length=255, blank=True)
 
