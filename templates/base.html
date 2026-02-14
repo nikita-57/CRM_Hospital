@@ -24,6 +24,9 @@
         --radius: 18px;
         --radius-sm: 12px;
         }
+
+        
+}
         .page-title {
             color: #ffffff;
             text-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
@@ -403,13 +406,89 @@ select:focus {
     border-radius: var(--radius-sm);
     padding: 12px 16px;
 }
+        .user-info {
+    color: #c084fc; /* Фиолетовый акцент — как у активных элементов */
+    font-weight: 500;
+    letter-spacing: -0.1px;
+    opacity: 0.9;
+    transition: color 0.3s ease;
+}
+
+        
+
+.navbar .d-flex a.btn-logout,
+button.btn-logout,
+a.btn-logout {
+    color: #c084fc !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 13px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.1px !important;
+    text-decoration: none !important;
+    outline: none !important;
+    cursor: pointer;
+    line-height: 1 !important;
+    /* Активируем плавные эффекты */
+    transition: all 0.3s ease !important;
+}
+
+.navbar .d-flex a.btn-logout:hover,
+.navbar .d-flex a.btn-logout:focus,
+button.btn-logout:hover,
+a.btn-logout:hover,
+a.btn-logout:focus {
+    color: #a855f7 !important;
+    text-shadow: 
+        0 0 6px rgba(168, 85, 247, 0.5),
+        0 0 12px rgba(168, 85, 247, 0.4),
+        0 0 20px rgba(168, 85, 247, 0.3) !important;
+    background: transparent !important;
+    transform: scale(1.02);
+}
+
+.navbar-brand {
+    color: #c084fc !important;
+    font-weight: 700;
+    font-size: 1.55rem;
+    letter-spacing: -0.5px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.navbar-brand .bi-heart-fill {
+    color: #ec4899 !important; /* Розовое сердце */
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.navbar-brand:hover .bi-heart-fill {
+    transform: scale(1.2) rotate(10deg);
+    color: #f97316 !important;
+    text-shadow: 0 0 8px rgba(255, 168, 168, 0.6);
+}
+
+.navbar-brand:hover {
+    color: #a855f7 !important;
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+    transform: scale(1.03);
+}
+
     </style>
 </head>
 
 <body>
     <nav class="navbar navbar-expand-lg app-nav">
         <div class="container-lg">
-            <a class="navbar-brand" href="/">MedCRM</a>
+            <a class="navbar-brand" href="/"
+                style="color: #c084fc; font-weight: 700; font-size: 1.55rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="bi-heart-fill" style="color: #ec4899;"></i>
+                    MedCRM
+                </a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav me-auto gap-2">
                     <li class="nav-item"><a class="nav-link" href="{% url 'web:patients' %}">Пациенты</a></li>
@@ -419,11 +498,18 @@ select:focus {
                 </ul>
                 <div class="d-flex align-items-center gap-2">
                     {% if user.is_authenticated %}
-                    <span class="text-muted small">{{ user.get_full_name|default:user.username }} ({{ user.role }})</span>
-                    <form method="post" action="{% url 'web:logout' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-ghost">Выход</button>
-                    </form>
+                    <span class="user-info small">{{ user.get_full_name|default:user.username }} ({{ user.role }})</span>
+                    <form id="logout-form" method="post" action="{% url 'web:logout' %}" style="display: inline;">
+                            {% csrf_token %}
+                        </form>
+                        <a href="#"
+                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                            class="btn-logout"
+                            style="color: #c084fc; transition: all 0.3s ease;"
+                            onmouseover="this.style.textShadow='0 0 6px rgba(168,85,247,0.5), 0 0 12px rgba(168,85,247,0.3)'; this.style.color='#a855f7';"
+                            onmouseout="this.style.textShadow='none'; this.style.color='#c084fc';">
+                            Выход
+                            </a>
                     {% else %}
                     <a class="btn btn-primary" href="{% url 'web:login' %}">Вход</a>
                     {% endif %}
