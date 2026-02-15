@@ -51,6 +51,7 @@
                 <tr>
                     <th>Фамилия</th>
                     <th>Имя</th>
+                    <th>Позывной</th>
                     <th>Дата рождения</th>
                     <th>Возраст</th>
                     <th>Отделение</th>
@@ -66,6 +67,7 @@
                 <tr {% if not p.is_active %}class="table-secondary" {% endif %}>
                     <td>{{ p.last_name }}</td>
                     <td>{{ p.first_name }}</td>
+                    <td>{{ p.callsign|default:"—" }}</td>
                     <td>{{ p.birth_date|date:"d.m.Y" }}</td>
                     <td>{% if p.age %}{{ p.age }}{% else %}—{% endif %}</td>
                     <td>{{ p.get_department_display }}</td>
