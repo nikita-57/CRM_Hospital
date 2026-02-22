@@ -46,7 +46,7 @@
 
 <div class="card-surface p-0">
     <div class="table-responsive">
-        <table class="table mb-0">
+        <table class="table mb-0 patients-table">
             <thead>
                 <tr>
                     <th>Фамилия</th>
@@ -81,8 +81,8 @@
                         {% endif %}
                     </td>
                     <td>{{ p.facility|default:"—" }}</td>
-                    <td class="text-end">
-                        <div class="d-flex flex-column gap-2 align-items-end">
+                    <td class="text-end patients-actions-cell">
+                        <div class="d-flex flex-column gap-2 align-items-end patients-actions">
                             <a class="btn btn-sm btn-outline-primary" href="{% url 'web:patient_detail' p.id %}">Открыть</a>
                         {% if user.role == "REG" %}
                         {% if p.is_active %}
@@ -103,7 +103,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10" class="text-muted text-center py-4">Ничего не найдено</td>
+                    <td colspan="11" class="text-muted text-center py-4">Ничего не найдено</td>
                 </tr>
                 {% endfor %}
             </tbody>
