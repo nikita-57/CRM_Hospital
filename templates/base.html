@@ -10,20 +10,34 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap">
     <style>
+        /* Тёмная тема (по умолчанию) */
         :root {
-        --bg: #0f0f14;
-        --surface: #1a1a2e;
-        --surface-muted: #24243e;
-        --text: #e0e0ff;
-        --muted: #9ca3af;
-        --line: #3a3a5d;
-        --accent: #a855f7;
-        --accent-strong: #8b4cf0;
-        --danger: #f87171;
-        --shadow: 0 8px 24px rgba(10, 10, 30, 0.4);
-        --radius: 18px;
-        --radius-sm: 12px;
+            --bg: #0f0f14;
+            --surface: #1a1a2e;
+            --surface-muted: #24243e;
+            --text: #e0e0ff;
+            --muted: #9ca3af;
+            --line: #3a3a5d;
+            --accent: #a855f7;
+            --accent-strong: #8b4cf0;
+            --danger: #f87171;
+            --shadow: 0 8px 24px rgba(10, 10, 30, 0.4);
+            --radius: 18px;
+            --radius-sm: 12px;
         }
+
+        /* Светлая тема */
+        .light-theme {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --surface-muted: #f1f5f9;
+            --text: #0f172a;
+            --muted: #64748b;
+            --line: #cbd5e1;
+            --accent: #7c3aed;
+            --accent-strong: #6d28d9;
+            --danger: #dc2626;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
         .page-title {
             color: #ffffff;
@@ -46,13 +60,12 @@
         }
 
         body {
-            font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-            color: var(--text);
-            background: radial-gradient(1200px 500px at 10% -10%, #e8f5f2 0%, transparent 60%),
-                radial-gradient(800px 400px at 100% 0%, #eef2ff 0%, transparent 55%),
-                var(--bg);
-            min-height: 100vh;
-        }
+        font-family: "Manrope", system-ui, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        min-height: 100vh;
+        transition: background 0.3s ease, color 0.3s ease;
+}
 
 .container-lg .table,
 .app-main .table,
@@ -481,6 +494,7 @@ a.btn-logout:focus {
 
 <body>
     <nav class="navbar navbar-expand-lg app-nav">
+        <div class="d-flex align-items-center gap-2">
         <div class="container-lg">
             <a class="navbar-brand" href="/"
                 style="color: #c084fc; font-weight: 700; font-size: 1.55rem; display: flex; align-items: center; gap: 8px;">
@@ -508,6 +522,9 @@ a.btn-logout:focus {
                             onmouseout="this.style.textShadow='none'; this.style.color='#c084fc';">
                             Выход
                             </a>
+                            <button id="theme-toggle" class="btn btn-ghost" aria-label="Переключить тему">
+                                <i class="bi bi-moon-stars" id="theme-icon"></i>
+                            </button>
                     {% else %}
                     <a class="btn btn-primary" href="{% url 'web:login' %}">Вход</a>
                     {% endif %}
@@ -527,33 +544,59 @@ a.btn-logout:focus {
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/imask"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.js-date').forEach(el => {
-                flatpickr(el, {
-                    dateFormat: 'Y-m-d',
-                    maxDate: el.dataset.max || 'today',
-                    allowInput: true
-                });
-            });
-
-            document.querySelectorAll('.js-datetime').forEach(el => {
-                flatpickr(el, {
-                    enableTime: true,
-                    time_24hr: true,
-                    dateFormat: 'Y-m-d H:i',
-                    allowInput: true
-                });
-            });
-
-            document.querySelectorAll('.js-phone').forEach(el => {
-                IMask(el, {
-                    mask: '+{7} (000) 000-00-00',
-                    lazy: false
-                });
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.js-date').forEach(el => {
+            flatpickr(el, {
+                dateFormat: 'Y-m-d',
+                maxDate: el.dataset.max || 'today',
+                allowInput: true
             });
         });
-    </script>
-    {% block extra_scripts %}{% endblock %}
+
+        document.querySelectorAll('.js-datetime').forEach(el => {
+            flatpickr(el, {
+                enableTime: true,
+                time_24hr: true,
+                dateFormat: 'Y-m-d H:i',
+                allowInput: true
+            });
+        });
+
+        document.querySelectorAll('.js-phone').forEach(el => {
+            IMask(el, {
+                mask: '+{7} (000) 000-00-00',
+                lazy: false
+            });
+        });
+
+        // --- Код переключения темы ---
+        const html = document.documentElement;
+        const toggleBtn = document.getElementById('theme-toggle');
+        const icon = document.getElementById('theme-icon');
+
+        if (localStorage.getItem('theme') === 'light') {
+            html.classList.add('light-theme');
+            icon.classList.replace('bi-moon-stars', 'bi-sun');
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            html.classList.toggle('light-theme');
+
+            if (html.classList.contains('light-theme')) {
+                icon.classList.replace('bi-moon-stars', 'bi-sun');
+                localStorage.setItem('theme', 'light');
+            } else {
+                icon.classList.replace('bi-sun', 'bi-moon-stars');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+        // --- Конец кода темы ---
+    });
+</script>
+
+{% block extra_scripts %}{% endblock %}
+
+    
 </body>
 
 </html>
