@@ -47,7 +47,19 @@
                 <tr>
                     <th class="whitespace-nowrap">Тип пациента</th>
                     <td style="word-wrap: break-word; word-break: break-word; max-width: 200px;">
-                        {% if object.patient_type == "child" %}Ребёнок{% else %}Взрослый{% endif %}
+                        {% if object.patient_type == "child" %}
+                                Ребёнок
+                            {% elif object.patient_type == "adult" %}
+                                Взрослый
+                            {% else %}
+                                Неопределён
+                            {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="whitespace-nowrap">Лечащий врач</th>
+                    <td style="word-wrap: break-word; word-break: break-word; max-width: 200px;">
+                        {{ object.doctor.get_full_name|default:"—" }}
                     </td>
                 </tr>
                 <tr>
