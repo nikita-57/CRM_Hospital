@@ -44,7 +44,7 @@
                     <th>ФИО</th>
                     <th>Личный номер</th>
                     {% for day in dates %}
-                    <th class="text-center">{{ day }}</th>
+                    <th class="text-center day-cell">{{ day }}</th>
                     {% endfor %}
                 </tr>
             </thead>
@@ -54,7 +54,7 @@
                     <td>{{ row.fio }}</td>
                     <td>{{ row.document_id }}</td>
                     {% for visit in row.visits %}
-                    <td class="text-center">
+                    <td class="text-center day-cell">
                         {% if visit > 0 %}
                         ✓
                         {% else %}
