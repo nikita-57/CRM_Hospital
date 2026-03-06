@@ -392,41 +392,51 @@ class PatientCertificateView(RoleRequiredMixin, DetailView):
 
 class Dashboard(RoleRequiredMixin, TemplateView):
     template_name = "dashboard.html"
-    allowed_roles = {"REG"}
+    allowed_roles = {"REG", "DOC", "NUR", "ADMIN"}
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        user = self.request.user
+        is_reg = user.role == "REG"
 
-        # --- Врачи ---
-        doctors = (
-            User.objects
-            .filter(role="DOC", is_active=True)
-            .annotate(
-                total_patients=Count("patients", filter=Q(patients__is_active=True)),
-                adult_patients=Count(
-                    "patients",
-                    filter=Q(patients__patient_type="adult", patients__is_active=True)
-                ),
-                child_patients=Count(
-                    "patients",
-                    filter=Q(patients__patient_type="child", patients__is_active=True)
-                ),
-                unknown_patients=Count(
-                    "patients",
-                    filter=Q(patients__patient_type="unknown", patients__is_active=True)
-                ),
+        # --- KPI и врачи только для регистратора ---
+        if is_reg:
+            doctors = (
+                User.objects
+                .filter(role="DOC", is_active=True)
+                .annotate(
+                    total_patients=Count("patients", filter=Q(patients__is_active=True)),
+                    adult_patients=Count(
+                        "patients",
+                        filter=Q(patients__patient_type="adult", patients__is_active=True)
+                    ),
+                    child_patients=Count(
+                        "patients",
+                        filter=Q(patients__patient_type="child", patients__is_active=True)
+                    ),
+                    unknown_patients=Count(
+                        "patients",
+                        filter=Q(patients__patient_type="unknown", patients__is_active=True)
+                    ),
+                )
+                .order_by("last_name")
             )
-            .order_by("last_name")
-        )
 
-        # --- KPI ---
-        ctx["doctors_count"] = doctors.count()
-        ctx["patients_total"] = Patient.objects.filter(is_active=True).count()
-        ctx["patients_adult"] = Patient.objects.filter(patient_type="adult", is_active=True).count()
-        ctx["patients_child"] = Patient.objects.filter(patient_type="child", is_active=True).count()
-        ctx["patients_unknown"] = Patient.objects.filter(patient_type="unknown", is_active=True).count()
+            ctx["doctors_count"] = doctors.count()
+            ctx["patients_total"] = Patient.objects.filter(is_active=True).count()
+            ctx["patients_adult"] = Patient.objects.filter(patient_type="adult", is_active=True).count()
+            ctx["patients_child"] = Patient.objects.filter(patient_type="child", is_active=True).count()
+            ctx["patients_unknown"] = Patient.objects.filter(patient_type="unknown", is_active=True).count()
+            ctx["doctors"] = doctors
+        else:
+            # Для врачей, медсестёр и админа — только имя
+            ctx["doctors_count"] = None
+            ctx["patients_total"] = None
+            ctx["patients_adult"] = None
+            ctx["patients_child"] = None
+            ctx["patients_unknown"] = None
+            ctx["doctors"] = None
 
-        ctx["doctors"] = doctors
         return ctx
     
 from django.http import JsonResponse

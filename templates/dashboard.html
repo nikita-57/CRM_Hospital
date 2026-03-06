@@ -4,11 +4,30 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">Добро пожаловать</h1>
-        <p class="page-subtitle">Сводка по врачам и пациентам</p>
+        <h1 class="page-title">
+            {% if user.role == 'REG' %}
+                Добро пожаловать, Регистратор!
+            {% elif user.role == 'DOC' %}
+                Здравствуйте, {{ user.get_full_name|default:user.username }}!
+            {% elif user.role == 'NUR' %}
+                Здравствуйте, {{ user.get_full_name|default:user.username }}!
+            {% elif user.role == 'ADMIN' %}
+                Здравствуйте, {{ user.get_full_name|default:user.username }}!
+            {% else %}
+                Добро пожаловать!
+            {% endif %}
+        </h1>
+        <p class="page-subtitle">
+            {% if user.role == 'REG' %}
+                Сводка по врачам и пациентам
+            {% else %}
+                Ваша роль: {{ user.get_role_display }}
+            {% endif %}
+        </p>
     </div>
 </div>
 
+{% if user.role == 'REG' %}
 <div class="kpi-grid mb-4">
     <div class="card-surface kpi-card text-center">
         <h6>Врачи</h6>
@@ -74,4 +93,6 @@
         </table>
     </div>
 </div>
+{% else %}
+{% endif %}
 {% endblock %}
