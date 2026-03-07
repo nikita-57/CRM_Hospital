@@ -2,7 +2,7 @@
 from django import forms
 from datetime import date
 from patients.models import Patient
-from clinical.models import Encounter, Note, Prescription
+from clinical.models import Encounter, Note, Prescription, TreatmentPlanItem
 from accounts.models import User
 
 class PatientForm(forms.ModelForm):
@@ -19,7 +19,7 @@ class PatientForm(forms.ModelForm):
                 attrs={
                     "type": "text",
                     "class": "form-control js-date",
-                    "placeholder": "ГГГГ-ММ-ДД",
+                    "placeholder": "ДД.ММ.ГГГГ",
                     "data-max": date.today().isoformat(),
                     "patient_type": forms.Select(attrs={"class": "form-select"}),
                 }
@@ -55,13 +55,13 @@ class PatientForm(forms.ModelForm):
 class EncounterForm(forms.ModelForm):
     started_at = forms.DateTimeField(
         required=False,
-        input_formats=["%Y-%m-%d %H:%M"],
+        input_formats=["%d.%m.%Y %H:%M"],
         widget=forms.DateTimeInput(
-            format="%Y-%m-%d %H:%M",
+            format="%d.%m.%Y %H:%M",
             attrs={
                 "type": "text",
                 "class": "form-control js-datetime",
-                "placeholder": "ГГГГ-ММ-ДД ЧЧ:ММ",
+                "placeholder": "ДД.ММ.ГГГГ ЧЧ:ММ",
             },
         ),
     )
@@ -115,4 +115,29 @@ class PrescriptionForm(forms.ModelForm):
             "frequency": forms.TextInput(attrs={"class": "form-control", "placeholder": "2 раза в день"}),
             "duration_days": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
             "notes": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+        }
+
+
+class TreatmentPlanItemForm(forms.ModelForm):
+    due_date = forms.DateField(
+        required=False,
+        input_formats=['%d.%m.%Y', '%Y-%m-%d'],
+        widget=forms.DateInput(
+            attrs={
+                "type": "text",
+                "class": "form-control js-plain-date",
+                "placeholder": "ДД.ММ.ГГГГ",
+            }
+        )
+    )
+    
+    class Meta:
+        model = TreatmentPlanItem
+        fields = ["event", "due_date"]
+        labels = {
+            "event": "Мероприятие",
+            "due_date": "Дата исполнения",
+        }
+        widgets = {
+            "event": forms.TextInput(attrs={"class": "form-control", "placeholder": "Название мероприятия"}),
         }

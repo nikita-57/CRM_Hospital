@@ -23,6 +23,9 @@
         {% if user.role in "ADMIN DOC NUR REG" %}
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#encounterModal">+ Новый визит</button>
         {% endif %}
+        {% if user.role in "ADMIN DOC" %}
+        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#planModal">План работы</button>
+        {% endif %}
         {% if user.role in "ADMIN DOC REG" %}
         <a href="{% url 'web:patient_certificate' object.id %}" class="btn btn-ghost">Отправить справку</a>
         {% endif %}
@@ -193,6 +196,106 @@
                     <button class="btn btn-primary w-100">Создать визит</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if user.role in "ADMIN DOC" %}
+<div class="modal fade" id="planModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">План работы с пациентом</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Форма добавления нового пункта -->
+                <form method="post" class="mb-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_plan_item">
+                    
+                    <div class="card card-surface">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3">Добавить пункт плана</h6>
+                            <div class="row g-2">
+                                <div class="col-md-9">
+                                    <label class="form-label">Мероприятие</label>
+                                    {{ plan_form.event }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Дата исполнения</label>
+                                    {{ plan_form.due_date }}
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3">Добавить пункт</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Таблица существующих пунктов -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">№</th>
+                                <th>Мероприятие</th>
+                                <th style="width: 150px;">Дата исполнения</th>
+                                <th style="width: 100px;">Статус</th>
+                                <th style="width: 100px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if treatment_plan %}
+                                {% for item in treatment_plan %}
+                                <tr class="{% if item.is_completed %}table-success{% endif %}">
+                                    <td>{{ item.order }}</td>
+                                    <td>{{ item.event }}</td>
+                                    <td>
+                                        {% if item.due_date %}
+                                            {{ item.due_date|date:"d.m.Y" }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="toggle_plan_item">
+                                            <input type="hidden" name="plan_item_id" value="{{ item.id }}">
+                                            {% if item.is_completed %}
+                                                <button type="submit" class="btn btn-sm btn-success">Выполнено</button>
+                                            {% else %}
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">В плане</button>
+                                            {% endif %}
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete_plan_item">
+                                            <input type="hidden" name="plan_item_id" value="{{ item.id }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить пункт плана?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">План работы ещё не создан</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
         </div>
     </div>
 </div>

@@ -584,6 +584,84 @@
         #theme-toggle:checked + .theme-slider::after {
             transform: translateX(20px);
         }
+
+        /* Стили для таблицы в модальном окне плана работы */
+        #planModal .table {
+            --bs-table-border-color: var(--line);
+        }
+
+        #planModal .table-bordered,
+        #planModal .table-bordered > :not(caption) > * > * {
+            border-color: var(--line) !important;
+        }
+
+        #planModal .table-bordered thead th {
+            background: var(--surface-muted);
+            color: var(--muted);
+            border-color: var(--line) !important;
+        }
+
+        #planModal .table-bordered tbody tr {
+            background: var(--surface);
+        }
+
+        #planModal .table-bordered tbody tr:hover {
+            background: var(--table-row-hover);
+        }
+
+        #planModal .table-bordered tbody tr.table-success {
+            background: rgba(20, 184, 166, 0.15);
+        }
+
+        #planModal .table-bordered tbody tr.table-success:hover {
+            background: rgba(20, 184, 166, 0.2);
+        }
+
+        #planModal .table-bordered tbody tr.table-success td {
+            border-color: var(--line) !important;
+        }
+
+        #planModal .modal-content {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--line);
+        }
+
+        #planModal .modal-header {
+            border-bottom-color: var(--line);
+        }
+
+        #planModal .modal-footer {
+            border-top-color: var(--line);
+        }
+
+        #planModal .btn-close {
+            filter: var(--bs-btn-close-white-filter, none);
+        }
+
+        [data-theme="dark"] #planModal .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        #planModal .card-title,
+        [data-theme="dark"] #planModal .card-title {
+            color: var(--text) !important;
+            font-weight: 600;
+        }
+
+        #planModal .form-label,
+        [data-theme="dark"] #planModal .form-label {
+            color: var(--muted) !important;
+        }
+
+        [data-theme="dark"] #planModal .modal-content {
+            background: var(--surface) !important;
+            color: var(--text) !important;
+        }
+
+        [data-theme="dark"] #planModal .modal-body {
+            color: var(--text) !important;
+        }
     </style>
 </head>
 
@@ -630,9 +708,18 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.js-date').forEach(el => {
                 flatpickr(el, {
-                    dateFormat: 'Y-m-d',
+                    dateFormat: 'd.m.Y',
                     maxDate: el.dataset.max || 'today',
                     allowInput: true
+                });
+            });
+
+            // Календарь без ограничений даты (для плана лечения)
+            document.querySelectorAll('.js-plain-date').forEach(el => {
+                flatpickr(el, {
+                    dateFormat: 'd.m.Y',
+                    allowInput: true,
+                    locale: { firstDayOfWeek: 1 }
                 });
             });
 
@@ -640,7 +727,7 @@
                 flatpickr(el, {
                     enableTime: true,
                     time_24hr: true,
-                    dateFormat: 'Y-m-d H:i',
+                    dateFormat: 'd.m.Y H:i',
                     allowInput: true,
                     locale: { firstDayOfWeek: 1 }
                 });

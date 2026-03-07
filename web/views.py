@@ -9,9 +9,9 @@ from django.utils import timezone
 from django.views.generic import UpdateView
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
-from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm
+from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm, TreatmentPlanItemForm
 from patients.models import Patient, DEPARTMENT_CHOICES, Facility
-from clinical.models import Encounter, Note, Prescription
+from clinical.models import Encounter, Note, Prescription, TreatmentPlanItem
 from .mixins import RoleRequiredMixin, PatientFilterMixin
 from django.db.models.functions import TruncWeek, TruncMonth, TruncDay
 from django.db import models
@@ -134,6 +134,11 @@ class PatientDetail(RoleRequiredMixin, DetailView):
         rx_form.fields["encounter"].queryset = enc_qs
         ctx["rx_form"] = rx_form
 
+        # Форма плана лечения
+        plan_form = TreatmentPlanItemForm()
+        ctx["plan_form"] = plan_form
+        ctx["treatment_plan"] = patient.treatment_plan.all()
+
         return ctx
 
     def post(self, request, *args, **kwargs):
@@ -230,6 +235,73 @@ class PatientDetail(RoleRequiredMixin, DetailView):
                 description = f"Закрыт визит ID {enc_id}",
             )
             messages.success(request, "Визит закрыт.")
+            return redirect(self.request.path)
+
+        # --- Добавить пункт плана лечения ---
+        if action == "add_plan_item":
+            from clinical.utils import log_patient_interaction
+            if request.user.role not in {"ADMIN", "DOC"}:
+                messages.error(request, "Только врач может добавлять план лечения.")
+                return redirect(self.request.path)
+
+            form = TreatmentPlanItemForm(request.POST)
+            if form.is_valid():
+                plan_item = form.save(commit=False)
+                plan_item.patient = self.object
+                # Автоматически присваиваем следующий номер
+                last_order = TreatmentPlanItem.objects.filter(
+                    patient=self.object
+                ).aggregate(models.Max("order"))["order__max"]
+                plan_item.order = (last_order or 0) + 1
+                plan_item.save()
+                log_patient_interaction(
+                    patient=self.object,
+                    action="plan_item_add",
+                    user=request.user,
+                    description=f"Добавлен пункт плана ID {plan_item.id}",
+                )
+                messages.success(request, "Пункт плана лечения добавлен.")
+            else:
+                messages.error(request, f"Ошибка в форме плана: {form.errors}")
+            return redirect(self.request.path)
+
+        # --- Удалить пункт плана лечения ---
+        if action == "delete_plan_item":
+            from clinical.utils import log_patient_interaction
+            if request.user.role not in {"ADMIN", "DOC"}:
+                messages.error(request, "Только врач может удалять план лечения.")
+                return redirect(self.request.path)
+
+            plan_item_id = request.POST.get("plan_item_id")
+            plan_item = get_object_or_404(TreatmentPlanItem, id=plan_item_id, patient=self.object)
+            plan_item.delete()
+            log_patient_interaction(
+                patient=self.object,
+                action="plan_item_delete",
+                user=request.user,
+                description=f"Удалён пункт плана ID {plan_item_id}",
+            )
+            messages.success(request, "Пункт плана лечения удалён.")
+            return redirect(self.request.path)
+
+        # --- Отметить пункт плана как выполненный ---
+        if action == "toggle_plan_item":
+            from clinical.utils import log_patient_interaction
+            if request.user.role not in {"ADMIN", "DOC"}:
+                messages.error(request, "Только врач может отмечать выполнение плана.")
+                return redirect(self.request.path)
+
+            plan_item_id = request.POST.get("plan_item_id")
+            plan_item = get_object_or_404(TreatmentPlanItem, id=plan_item_id, patient=self.object)
+            plan_item.is_completed = not plan_item.is_completed
+            plan_item.save(update_fields=["is_completed"])
+            log_patient_interaction(
+                patient=self.object,
+                action="plan_item_toggle",
+                user=request.user,
+                description=f"Изменён статус пункта плана ID {plan_item_id}",
+            )
+            messages.success(request, "Статус пункта плана обновлён.")
             return redirect(self.request.path)
 
         return redirect(self.request.path)

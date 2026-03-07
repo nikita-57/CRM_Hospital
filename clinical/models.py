@@ -60,6 +60,9 @@ class PatientInteraction(models.Model):
         ("rx_add", "Назначение лекарства"),
         ("patient_update", "Обновлена информация о пациенте"),
         ("facility_update", "Обновлена информация о месте размещения"),
+        ("plan_item_add", "Добавлен пункт плана"),
+        ("plan_item_delete", "Удалён пункт плана"),
+        ("plan_item_toggle", "Изменён статус пункта плана"),
     ]
     patient = models.ForeignKey("patients.Patient", on_delete=models.CASCADE, related_name="interactions")
     User = get_user_model()
@@ -71,3 +74,27 @@ class PatientInteraction(models.Model):
         ordering = ["-created_at"]
     def __str__(self):
         return f"{self.get_action_display()} - {self.patient} at {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+class TreatmentPlanItem(models.Model):
+    """Пункт плана работы с пациентом"""
+    patient = models.ForeignKey(
+        "patients.Patient",
+        on_delete=models.CASCADE,
+        related_name="treatment_plan",
+        verbose_name="Пациент"
+    )
+    order = models.PositiveIntegerField("Пункт по порядку", default=1)
+    event = models.CharField("Мероприятие", max_length=500)
+    due_date = models.DateField("Дата исполнения", null=True, blank=True)
+    is_completed = models.BooleanField("Выполнено", default=False)
+    created_at = models.DateTimeField("Создан", auto_now_add=True)
+    updated_at = models.DateTimeField("Обновлён", auto_now=True)
+
+    class Meta:
+        verbose_name = "Пункт плана лечения"
+        verbose_name_plural = "Планы лечения"
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"Пункт {self.order}: {self.event[:50]}..."

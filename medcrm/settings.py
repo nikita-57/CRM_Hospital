@@ -103,6 +103,16 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Форматы дат для России
+DATE_FORMAT = 'd.m.Y'
+DATETIME_FORMAT = 'd.m.Y H:i'
+SHORT_DATE_FORMAT = 'd.m.Y'
+SHORT_DATETIME_FORMAT = 'd.m.Y H:i'
+
+# Форматы ввода дат
+DATE_INPUT_FORMATS = ['%d.%m.%Y', '%Y-%m-%d']
+DATETIME_INPUT_FORMATS = ['%d.%m.%Y %H:%M', '%Y-%m-%d %H:%M']
+
 
 
 
