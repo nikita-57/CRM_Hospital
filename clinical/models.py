@@ -27,7 +27,7 @@ class Encounter(models.Model):
         ordering = ["-started_at"]
 
     def __str__(self):
-        started = self.started_at.strftime("%Y-%m-%d %H:%M") if self.started_at else "не начат"
+        started = self.started_at.strftime("%d.%m.%Y %H:%M") if self.started_at else "не начат"
         status = self.get_status_display()
         reason = self.reason if self.reason else "без причины"
         return f"Визит {self.id} ({started}, {status}) - {self.patient}"
