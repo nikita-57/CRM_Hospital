@@ -13,6 +13,14 @@ class Encounter(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Окончание визита")
     reason = models.CharField(max_length=255, blank=True, verbose_name="Причина визита")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNED, verbose_name="Статус")
+    treatment_plan_item = models.ForeignKey(
+        "TreatmentPlanItem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="encounters",
+        verbose_name="Пункт плана лечения"
+    )
     class Meta:
         verbose_name = "Визит"
         verbose_name_plural = "Визиты"

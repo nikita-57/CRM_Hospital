@@ -120,8 +120,10 @@ class PatientDetail(RoleRequiredMixin, DetailView):
         enc_qs = Encounter.objects.filter(patient=patient).order_by("-started_at")
         ctx["encounters"] = enc_qs
 
-        # Форма создания визита (без patient и doctor — они будут выставлены в post)
-        ctx["encounter_form"] = EncounterForm()
+        # Форма создания визита с пунктами плана лечения
+        encounter_form = EncounterForm(patient=patient)
+        ctx["encounter_form"] = encounter_form
+        
         ctx["interactions"] = patient.interactions.all().order_by("-created_at")
         # Формы заметки и назначения
         default_enc_id = enc_qs[0].id if enc_qs else None
@@ -151,7 +153,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
                 messages.error(request, "Нет прав на создание визита.")
                 return redirect(self.request.path)
 
-            form = EncounterForm(request.POST)
+            form = EncounterForm(request.POST, patient=self.object)
             if form.is_valid():
                 encounter = form.save(commit=False)
                 encounter.patient = self.object      # Привязываем к текущему пациенту

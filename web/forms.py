@@ -68,20 +68,29 @@ class EncounterForm(forms.ModelForm):
 
     class Meta:
         model = Encounter
-        fields = ["started_at", "reason", "status"]
+        fields = ["started_at", "reason", "status", "treatment_plan_item"]
         widgets = {
             "patient": forms.Select(attrs={"class": "form-select"}),
             "doctor": forms.Select(attrs={"class": "form-select"}),
             "reason": forms.TextInput(attrs={"class": "form-control", "placeholder": "Причина визита"}),
             "status": forms.Select(attrs={"class": "form-select"}),
+            "treatment_plan_item": forms.Select(attrs={"class": "form-select"}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, patient=None, **kwargs):
         super().__init__(*args, **kwargs)
         if self.initial.get('patient'):
             self.fields['patient'].widget = forms.HiddenInput()
         if self.initial.get('doctor'):
             self.fields['doctor'].widget = forms.HiddenInput()
+        # Добавляем пустой вариант выбора для пункта плана
+        self.fields['treatment_plan_item'].required = False
+        self.fields['treatment_plan_item'].empty_label = "—— Не выбрано ——"
+        # Устанавливаем queryset для пунктов плана лечения
+        if patient is not None:
+            self.fields['treatment_plan_item'].queryset = patient.treatment_plan.all()
+        else:
+            self.fields['treatment_plan_item'].queryset = TreatmentPlanItem.objects.none()
 
 class NoteForm(forms.ModelForm):
     class Meta:
