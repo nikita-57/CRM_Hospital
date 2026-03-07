@@ -99,6 +99,9 @@
                     <div>
                         <strong>{{ e.started_at|date:"d.m.Y H:i" }}</strong> — {{ e.get_status_display }}
                         {% if e.reason %} — {{ e.reason }}{% endif %}
+                        {% if e.treatment_plan_item %}
+                        <div class="mt-1 text-muted">{{ e.treatment_plan_item.event }}</div>
+                        {% endif %}
                     </div>
                     {% if not e.finished_at and user.role in "ADMIN DOC NUR" %}
                     <form method="post">

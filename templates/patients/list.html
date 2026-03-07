@@ -6,7 +6,7 @@
         <h1 class="page-title">Пациенты</h1>
         <p class="page-subtitle">Поиск и фильтрация по карточкам пациентов</p>
     </div>
-    {% if user.role in "ADMIN REG DOC" %}
+    {% if user.role in "ADMIN REG" %}
     <a class="btn btn-primary" href="{% url 'web:patient_create' %}">+ Новый пациент</a>
     {% endif %}
 </div>
