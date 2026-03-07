@@ -7,9 +7,6 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{% url 'web:patients' %}">Пациенты</a></li>
                 <li class="breadcrumb-item">{{ object.get_department_display }}</li>
-                <li class="breadcrumb-item active" aria-current="page">
-                    {{ object.last_name }} {{ object.first_name }}
-                </li>
             </ol>
         </nav>
         <h1 class="page-title">
