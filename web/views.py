@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.views.generic import UpdateView
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
-from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm, TreatmentPlanItemForm
+from .forms import PatientForm, EncounterForm, NoteForm, PrescriptionForm, TreatmentPlanItemForm, UserForm
 from patients.models import Patient, DEPARTMENT_CHOICES, Facility
 from clinical.models import Encounter, Note, Prescription, TreatmentPlanItem
 from .mixins import RoleRequiredMixin, PatientFilterMixin
@@ -36,9 +36,9 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
     model = Patient
     template_name = "patients/list.html"
     paginate_by = 20
-    allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
+    allowed_roles = {"ADMIN", "REG", "DOC", "LEAD", "NUR"}
     context_object_name = "patients"
-    
+
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -46,7 +46,7 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
         qs = self.apply_filters(qs)
         user = self.request.user
 
-        if user.role == "DOC":
+        if user.role in {"DOC", "LEAD"}:
             qs = qs.filter(department=user.department, is_active=True).distinct()
 
         q = (self.request.GET.get("q") or "").strip()
@@ -78,7 +78,7 @@ class PatientCreate(RoleRequiredMixin, CreateView):
     form_class = PatientForm
     template_name = "patients/create.html"
     success_url = reverse_lazy("web:patients")
-    allowed_roles = {"ADMIN", "REG"}
+    allowed_roles = {"ADMIN", "REG", "LEAD"}
 
     def form_valid(self, form):
         # 1. Сохраняем объект, но пока не в базу (commit=False), 
@@ -100,14 +100,14 @@ class PatientCreate(RoleRequiredMixin, CreateView):
 class PatientDetail(RoleRequiredMixin, DetailView):
     model = Patient
     template_name = "patients/detail.html"
-    allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
+    allowed_roles = {"ADMIN", "REG", "DOC", "LEAD", "NUR"}
 
     def get_queryset(self):
         """Врачи и медсёстры видят только пациентов своего отделения."""
         qs = super().get_queryset()
         user = self.request.user
 
-        if user.role in {"DOC", "NUR"}:
+        if user.role in {"DOC", "LEAD", "NUR"}:
             qs = qs.filter(department=user.department, is_active=True)
 
         return qs
@@ -149,7 +149,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
 
         # --- Создание визита ---
         if action == "add_encounter":
-            if request.user.role not in {"ADMIN", "DOC", "NUR", "REG"}:
+            if request.user.role not in {"ADMIN", "DOC", "LEAD", "NUR", "REG"}:
                 messages.error(request, "Нет прав на создание визита.")
                 return redirect(self.request.path)
 
@@ -175,7 +175,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
 
         # --- Добавить заметку ---
         if action == "add_note":
-            if request.user.role not in {"ADMIN", "DOC", "NUR", "REG"}:
+            if request.user.role not in {"ADMIN", "DOC", "LEAD", "NUR", "REG"}:
                 messages.error(request, "Нет прав добавлять заметки.")
                 return redirect(self.request.path)
 
@@ -200,7 +200,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
 
         # --- Добавить назначение ---
         if action == "add_rx":
-            if request.user.role not in {"ADMIN", "DOC", "NUR"}:
+            if request.user.role not in {"ADMIN", "DOC", "LEAD", "NUR"}:
                 messages.error(request, "Нет прав добавлять назначения.")
                 return redirect(self.request.path)
 
@@ -242,7 +242,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
         # --- Добавить пункт плана лечения ---
         if action == "add_plan_item":
             from clinical.utils import log_patient_interaction
-            if request.user.role not in {"ADMIN", "DOC"}:
+            if request.user.role not in {"ADMIN", "DOC", "LEAD"}:
                 messages.error(request, "Только врач может добавлять план лечения.")
                 return redirect(self.request.path)
 
@@ -270,7 +270,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
         # --- Удалить пункт плана лечения ---
         if action == "delete_plan_item":
             from clinical.utils import log_patient_interaction
-            if request.user.role not in {"ADMIN", "DOC"}:
+            if request.user.role not in {"ADMIN", "DOC", "LEAD"}:
                 messages.error(request, "Только врач может удалять план лечения.")
                 return redirect(self.request.path)
 
@@ -289,7 +289,7 @@ class PatientDetail(RoleRequiredMixin, DetailView):
         # --- Отметить пункт плана как выполненный ---
         if action == "toggle_plan_item":
             from clinical.utils import log_patient_interaction
-            if request.user.role not in {"ADMIN", "DOC"}:
+            if request.user.role not in {"ADMIN", "DOC", "LEAD"}:
                 messages.error(request, "Только врач может отмечать выполнение плана.")
                 return redirect(self.request.path)
 
@@ -312,7 +312,7 @@ class PatientUpdate(RoleRequiredMixin, UpdateView):
     model = Patient
     form_class = PatientForm
     template_name = "patients/update.html"
-    allowed_roles = {"REG"}
+    allowed_roles = {"REG", "LEAD"}
 
     def get_success_url(self):
         return reverse("web:patient_detail", args=[self.object.id])
@@ -368,9 +368,108 @@ class PatientRestore(RoleRequiredMixin, View):
         messages.success(request, "Пациент восстановлен.")
         return redirect("web:patients")
 
+
+class UserCreate(RoleRequiredMixin, CreateView):
+    """Создание нового пользователя (только ADMIN и REG)."""
+    form_class = UserForm
+    template_name = "users/create.html"
+    success_url = reverse_lazy("web:users")
+    allowed_roles = {"ADMIN", "REG"}
+
+    def form_valid(self, form):
+        self.object = form.save()
+        messages.success(
+            self.request,
+            f"Пользователь {self.object.get_full_name() or self.object.username} создан с ролью {self.object.get_role_display()}."
+        )
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["departments"] = DEPARTMENTS
+        return ctx
+
+
+class UserList(RoleRequiredMixin, ListView):
+    """Список всех пользователей (только ADMIN и REG)."""
+    model = User
+    template_name = "users/list.html"
+    paginate_by = 20
+    allowed_roles = {"ADMIN", "REG"}
+    context_object_name = "users"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = (self.request.GET.get("q") or "").strip()
+        if q:
+            qs = qs.filter(
+                Q(last_name__icontains=q) |
+                Q(first_name__icontains=q) |
+                Q(username__icontains=q) |
+                Q(email__icontains=q)
+            )
+        role_filter = self.request.GET.get("role")
+        if role_filter:
+            qs = qs.filter(role=role_filter)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["roles"] = User.Role.choices
+        return ctx
+
+
+class UserUpdate(RoleRequiredMixin, UpdateView):
+    """Редактирование пользователя (только ADMIN и REG)."""
+    model = User
+    form_class = UserForm
+    template_name = "users/update.html"
+    success_url = reverse_lazy("web:users")
+    allowed_roles = {"ADMIN", "REG"}
+
+    def get_success_url(self):
+        return reverse("web:users")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f"Пользователь {self.object.get_full_name() or self.object.username} обновлён."
+        )
+        return response
+
+
+class UserDelete(RoleRequiredMixin, View):
+    """Удаление пользователя (только ADMIN)."""
+    def post(self, request, pk):
+        if request.user.role != "ADMIN":
+            messages.error(request, "Только администратор может удалять пользователей.")
+            return redirect("web:users")
+        user = get_object_or_404(User, pk=pk)
+        if user == request.user:
+            messages.error(request, "Нельзя удалить самого себя.")
+            return redirect("web:users")
+        user.is_active = False
+        user.save()
+        messages.success(request, f"Пользователь {user.username} деактивирован.")
+        return redirect("web:users")
+
+
+class UserRestore(RoleRequiredMixin, View):
+    """Восстановление пользователя (только ADMIN)."""
+    def post(self, request, pk):
+        if request.user.role != "ADMIN":
+            messages.error(request, "Только администратор может восстанавливать пользователей.")
+            return redirect("web:users")
+        user = get_object_or_404(User, pk=pk)
+        user.is_active = True
+        user.save()
+        messages.success(request, f"Пользователь {user.username} восстановлен.")
+        return redirect("web:users")
+
 class StatsView(RoleRequiredMixin, TemplateView):
     template_name = 'stats/departments.html'
-    allowed_roles = {"ADMIN", "REG", "DOC", "NUR"}
+    allowed_roles = {"ADMIN", "REG", "DOC", "LEAD", "NUR"}
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -431,7 +530,7 @@ class StatsView(RoleRequiredMixin, TemplateView):
 class PatientCertificateView(RoleRequiredMixin, DetailView):
     model = Patient
     template_name = "patients/certificate.html"
-    allowed_roles = {"ADMIN", "REG", "DOC"}
+    allowed_roles = {"ADMIN", "REG", "DOC", "LEAD"}
 
     def get(self, request, pk):
         patient = get_object_or_404(Patient, pk=pk)
@@ -466,14 +565,15 @@ class PatientCertificateView(RoleRequiredMixin, DetailView):
 
 class Dashboard(RoleRequiredMixin, TemplateView):
     template_name = "dashboard.html"
-    allowed_roles = {"REG", "DOC", "NUR", "ADMIN"}
+    allowed_roles = {"REG", "DOC", "LEAD", "NUR", "ADMIN"}
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
         is_reg = user.role == "REG"
+        is_lead = user.role == "LEAD"
 
-        # --- KPI и врачи только для регистратора ---
+        # --- KPI и врачи для регистратора ---
         if is_reg:
             doctors = (
                 User.objects
@@ -502,6 +602,37 @@ class Dashboard(RoleRequiredMixin, TemplateView):
             ctx["patients_child"] = Patient.objects.filter(patient_type="child", is_active=True).count()
             ctx["patients_unknown"] = Patient.objects.filter(patient_type="unknown", is_active=True).count()
             ctx["doctors"] = doctors
+
+        # --- KPI и врачи для начальника отделения (только его отделение) ---
+        elif is_lead:
+            lead_doctors = (
+                User.objects
+                .filter(role="DOC", is_active=True, department=user.department)
+                .annotate(
+                    total_patients=Count("patients", filter=Q(patients__is_active=True)),
+                    adult_patients=Count(
+                        "patients",
+                        filter=Q(patients__patient_type="adult", patients__is_active=True)
+                    ),
+                    child_patients=Count(
+                        "patients",
+                        filter=Q(patients__patient_type="child", patients__is_active=True)
+                    ),
+                    unknown_patients=Count(
+                        "patients",
+                        filter=Q(patients__patient_type="unknown", patients__is_active=True)
+                    ),
+                )
+                .order_by("last_name")
+            )
+
+            ctx["lead_doctors_count"] = lead_doctors.count()
+            ctx["lead_patients_total"] = Patient.objects.filter(is_active=True, department=user.department).count()
+            ctx["lead_patients_adult"] = Patient.objects.filter(patient_type="adult", is_active=True, department=user.department).count()
+            ctx["lead_patients_child"] = Patient.objects.filter(patient_type="child", is_active=True, department=user.department).count()
+            ctx["lead_patients_unknown"] = Patient.objects.filter(patient_type="unknown", is_active=True, department=user.department).count()
+            ctx["lead_doctors"] = lead_doctors
+
         else:
             # Для врачей, медсестёр и админа — только имя
             ctx["doctors_count"] = None
@@ -510,6 +641,12 @@ class Dashboard(RoleRequiredMixin, TemplateView):
             ctx["patients_child"] = None
             ctx["patients_unknown"] = None
             ctx["doctors"] = None
+            ctx["lead_doctors_count"] = None
+            ctx["lead_patients_total"] = None
+            ctx["lead_patients_adult"] = None
+            ctx["lead_patients_child"] = None
+            ctx["lead_patients_unknown"] = None
+            ctx["lead_doctors"] = None
 
         return ctx
     
@@ -518,13 +655,13 @@ from accounts.models import User
 
 def get_doctors_by_department(request):
     department = request.GET.get('department')
-    # Фильтруем: роль 'DOC' и точное совпадение ключа отделения
-    doctors = User.objects.filter(role="DOC", department=department)
-    
+    # Фильтруем: роль 'DOC' или 'LEAD' и точное совпадение ключа отделения
+    doctors = User.objects.filter(role__in=["DOC", "LEAD"], department=department)
+
     # Формируем список словарей
     doctors_list = [
         {
-            'id': doc.id, 
+            'id': doc.id,
             'full_name': doc.get_full_name() or doc.username
         } for doc in doctors
     ]

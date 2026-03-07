@@ -139,7 +139,7 @@ class TreatmentPlanItemForm(forms.ModelForm):
             }
         )
     )
-    
+
     class Meta:
         model = TreatmentPlanItem
         fields = ["event", "due_date"]
@@ -150,3 +150,33 @@ class TreatmentPlanItemForm(forms.ModelForm):
         widgets = {
             "event": forms.TextInput(attrs={"class": "form-control", "placeholder": "Название мероприятия"}),
         }
+
+
+class UserForm(forms.ModelForm):
+    """Форма создания/редактирования пользователя."""
+    password = forms.CharField(
+        label="Пароль",
+        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        required=False,
+    )
+
+    class Meta:
+        model = User
+        fields = ["username", "first_name", "last_name", "email", "role", "department", "is_active"]
+        widgets = {
+            "username": forms.TextInput(attrs={"class": "form-control"}),
+            "first_name": forms.TextInput(attrs={"class": "form-control"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "role": forms.Select(attrs={"class": "form-select"}),
+            "department": forms.Select(attrs={"class": "form-select"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if self.cleaned_data.get("password"):
+            user.set_password(self.cleaned_data["password"])
+        if commit:
+            user.save()
+        return user

@@ -12,6 +12,7 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Администратор"
         REGISTRAR = "REG", "Регистратор"
+        LEAD = "LEAD", "Начальник отделения"
         DOCTOR = "DOC", "Врач"
         NURSE = "NUR", "Медсестра"
         PHARMACIST = "PHARM", "Провизор"
