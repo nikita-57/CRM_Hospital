@@ -46,8 +46,22 @@ class PatientList(RoleRequiredMixin, PatientFilterMixin, ListView):
         qs = self.apply_filters(qs)
         user = self.request.user
 
-        if user.role in {"DOC", "LEAD"}:
-            qs = qs.filter(department=user.department, is_active=True).distinct()
+        # Ограничение доступа к пациентам по ролям
+        if user.role == "ADMIN":
+            # Админ видит всех
+            pass
+        elif user.role == "REG":
+            # Регистратор видит всех активных пациентов
+            qs = qs.filter(is_active=True)
+        elif user.role == "LEAD":
+            # Начальник отделения видит только пациентов своего отделения
+            qs = qs.filter(department=user.department, is_active=True)
+        elif user.role == "DOC":
+            # Врач видит только своих пациентов
+            qs = qs.filter(doctor=user, is_active=True)
+        elif user.role == "NUR":
+            # Медсестра видит пациентов своего отделения
+            qs = qs.filter(department=user.department, is_active=True)
 
         q = (self.request.GET.get("q") or "").strip()
         if q:
@@ -107,7 +121,21 @@ class PatientDetail(RoleRequiredMixin, DetailView):
         qs = super().get_queryset()
         user = self.request.user
 
-        if user.role in {"DOC", "LEAD", "NUR"}:
+        # Ограничение доступа к пациентам по ролям
+        if user.role == "ADMIN":
+            # Админ видит всех
+            pass
+        elif user.role == "REG":
+            # Регистратор видит всех активных пациентов
+            qs = qs.filter(is_active=True)
+        elif user.role == "LEAD":
+            # Начальник отделения видит только пациентов своего отделения
+            qs = qs.filter(department=user.department, is_active=True)
+        elif user.role == "DOC":
+            # Врач видит только своих пациентов
+            qs = qs.filter(doctor=user, is_active=True)
+        elif user.role == "NUR":
+            # Медсестра видит пациентов своего отделения
             qs = qs.filter(department=user.department, is_active=True)
 
         return qs
@@ -314,6 +342,18 @@ class PatientUpdate(RoleRequiredMixin, UpdateView):
     template_name = "patients/update.html"
     allowed_roles = {"REG", "LEAD"}
 
+    def get_queryset(self):
+        """Ограничение доступа к редактированию пациентов."""
+        qs = super().get_queryset()
+        user = self.request.user
+
+        # LEAD может редактировать только пациентов своего отделения
+        if user.role == "LEAD":
+            qs = qs.filter(department=user.department)
+        # REG может редактировать всех
+
+        return qs
+
     def get_success_url(self):
         return reverse("web:patient_detail", args=[self.object.id])
     def form_valid(self, form):
@@ -473,6 +513,7 @@ class StatsView(RoleRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        user = self.request.user
 
         # 1. Получаем месяц из GET-параметров
         month_param = self.request.GET.get("month")  # формат YYYY-MM
@@ -485,10 +526,29 @@ class StatsView(RoleRequiredMixin, TemplateView):
         # 2. Генерируем список всех дней месяца
         _, days_in_month = calendar.monthrange(year, month)
         dates = [str(day) for day in range(1, days_in_month + 1)]
-        # 3. Фильтрация визитов по месяцу
-        department = self.request.GET.get("department")
+        
+        # 3. Фильтрация визитов по месяцу и по правам доступа
         encounters = Encounter.objects.filter(started_at__year=year, started_at__month=month)
-        if department:
+        
+        # Ограничение доступа по ролям
+        if user.role == "ADMIN":
+            # Админ видит всё
+            pass
+        elif user.role == "REG":
+            # Регистратор видит все визиты
+            pass
+        elif user.role == "LEAD":
+            # Начальник отделения видит только пациентов своего отделения
+            encounters = encounters.filter(patient__department=user.department)
+        elif user.role == "DOC":
+            # Врач видит только визиты своих пациентов
+            encounters = encounters.filter(patient__doctor=user)
+        elif user.role == "NUR":
+            # Медсестра видит только пациентов своего отделения
+            encounters = encounters.filter(patient__department=user.department)
+        
+        department = self.request.GET.get("department")
+        if department and user.role in {"ADMIN", "REG"}:
             encounters = encounters.filter(patient__department=department)
 
         # 4. Группировка: пациент + день
@@ -531,6 +591,26 @@ class PatientCertificateView(RoleRequiredMixin, DetailView):
     model = Patient
     template_name = "patients/certificate.html"
     allowed_roles = {"ADMIN", "REG", "DOC", "LEAD"}
+
+    def get_queryset(self):
+        """Ограничение доступа к сертификатам пациентов."""
+        qs = super().get_queryset()
+        user = self.request.user
+
+        if user.role == "ADMIN":
+            # Админ видит всех
+            pass
+        elif user.role == "REG":
+            # Регистратор видит всех активных
+            qs = qs.filter(is_active=True)
+        elif user.role == "LEAD":
+            # Начальник отделения видит только пациентов своего отделения
+            qs = qs.filter(department=user.department, is_active=True)
+        elif user.role == "DOC":
+            # Врач видит только своих пациентов
+            qs = qs.filter(doctor=user, is_active=True)
+
+        return qs
 
     def get(self, request, pk):
         patient = get_object_or_404(Patient, pk=pk)
