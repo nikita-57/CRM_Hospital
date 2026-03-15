@@ -31,18 +31,16 @@ class PlanningView(RoleRequiredMixin, TemplateView):
         if user.role == "ADMIN":
             # Админ видит всё
             pass
-        elif user.role == "LEAD":
-            # Начальник отделения видит своё отделение и общие (без отделения)
-            events = events.filter(Q(department=user.department) | Q(department=""))
-        elif user.role in {"DOC", "NUR"}:
-            # Врач и медсестра видят только своё отделение
+        elif user.role in {"LEAD", "DOC", "NUR"}:
+            # LEAD, DOC и NUR видят только своё отделение
             events = events.filter(department=user.department)
         elif user.role == "REG":
-            # Регистратор видит общие мероприятия (без отделения)
+            # Регистратор видит общие мероприятия (без отделения) и созданные им
             events = events.filter(Q(department="") | Q(created_by=user))
 
         # Применяем фильтры
-        if department:
+        # LEAD, DOC, NUR не могут фильтровать по отделению (только своё)
+        if department and user.role in {"ADMIN", "REG"}:
             events = events.filter(department=department)
         if event_type:
             events = events.filter(event_type=event_type)
@@ -71,12 +69,12 @@ class PlanningView(RoleRequiredMixin, TemplateView):
         ctx["selected_department"] = department or ""
         ctx["selected_event_type"] = event_type or ""
         
-        # Список исполнителей для фильтра (только REG и LEAD)
+        # Список исполнителей для фильтра
         if user.role in {"ADMIN", "REG", "LEAD"}:
             if user.role == "LEAD":
-                # LEAD видит только врачей своего отделения
+                # LEAD видит себя и сотрудников своего отделения
                 executors = User.objects.filter(
-                    role__in={"DOC", "NUR"},
+                    role__in={"DOC", "NUR", "LEAD"},
                     department=user.department,
                     is_active=True
                 ).order_by("last_name", "first_name")
@@ -97,15 +95,22 @@ class PlanningView(RoleRequiredMixin, TemplateView):
                     is_active=True
                 ).order_by("last_name", "first_name")
             ctx["executors"] = executors
+        elif user.role in {"DOC", "NUR"}:
+            # DOC и NUR видят коллег своего отделения
+            ctx["executors"] = User.objects.filter(
+                role__in={"DOC", "NUR", "LEAD"},
+                department=user.department,
+                is_active=True
+            ).order_by("last_name", "first_name")
         else:
             ctx["executors"] = User.objects.none()
         
         ctx["selected_responsible"] = responsible or ""
 
         # Права для отображения кнопок
-        ctx["can_create"] = user.role in {"ADMIN", "REG", "LEAD"}
+        ctx["can_create"] = user.role in {"ADMIN", "REG", "LEAD", "DOC", "NUR"}
         ctx["can_delete"] = user.role in {"ADMIN", "REG", "LEAD"}
-        ctx["can_toggle"] = user.role in {"ADMIN", "REG", "LEAD", "DOC"}
+        ctx["can_toggle"] = user.role in {"ADMIN", "REG", "LEAD", "DOC", "NUR"}
 
         # Форма для нового мероприятия
         ctx["event_form"] = EventForm()
@@ -118,7 +123,7 @@ class PlanningView(RoleRequiredMixin, TemplateView):
         user = request.user
 
         if action == "add_event":
-            if user.role not in {"ADMIN", "REG", "LEAD"}:
+            if user.role not in {"ADMIN", "REG", "LEAD", "DOC", "NUR"}:
                 messages.error(request, "Нет прав на создание мероприятий.")
                 return redirect("planning:list")
 
@@ -126,13 +131,11 @@ class PlanningView(RoleRequiredMixin, TemplateView):
             if form.is_valid():
                 event = form.save(commit=False)
                 event.created_by = user
-                
-                # LEAD и DOC автоматически получают своё отделение
-                if user.role == "LEAD" and not event.department:
+
+                # LEAD, DOC и NUR всегда получают своё отделение
+                if user.role in {"LEAD", "DOC", "NUR"}:
                     event.department = user.department
-                elif user.role == "DOC" and not event.department:
-                    event.department = user.department
-                
+
                 event.save()
                 messages.success(request, "Мероприятие успешно создано.")
             else:

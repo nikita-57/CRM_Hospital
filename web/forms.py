@@ -186,6 +186,7 @@ class UserForm(forms.ModelForm):
 class EventForm(forms.ModelForm):
     """Форма создания/редактирования мероприятия."""
     event_date = forms.DateField(
+        label="Дата проведения",
         input_formats=['%d.%m.%Y', '%Y-%m-%d'],
         widget=forms.DateInput(
             attrs={
@@ -196,6 +197,7 @@ class EventForm(forms.ModelForm):
         )
     )
     event_time = forms.TimeField(
+        label="Время начала",
         required=False,
         input_formats=['%H:%M', '%H:%M:%S'],
         widget=forms.TimeInput(

@@ -19,6 +19,7 @@
 <!-- Фильтры -->
 <div class="card-surface mb-4">
     <form class="row g-3 align-items-end" method="get">
+        {% if user.role in "ADMIN REG" %}
         <div class="col-lg-3">
             <label class="form-label">Отделение</label>
             <select name="department" class="form-select">
@@ -28,7 +29,8 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-lg-3">
+        {% endif %}
+        <div class="{% if user.role in 'ADMIN REG' %}col-lg-3{% else %}col-lg-4{% endif %}">
             <label class="form-label">Тип мероприятия</label>
             <select name="event_type" class="form-select">
                 <option value="">Все типы</option>
@@ -37,7 +39,7 @@
                 {% endfor %}
             </select>
         </div>
-        {% if user.role in "ADMIN REG LEAD" %}
+        {% if executors %}
         <div class="col-lg-3">
             <label class="form-label">Исполнитель</label>
             <select name="responsible" class="form-select">
@@ -172,7 +174,12 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">{{ event_form.department.label }}</label>
+                            {% if user.role in "LEAD DOC NUR" %}
+                            <input type="hidden" name="department" value="{{ user.department }}">
+                            <input type="text" class="form-control" value="{{ user.get_department_display }}" disabled>
+                            {% else %}
                             {{ event_form.department }}
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -189,7 +196,16 @@
                     
                     <div class="mb-3">
                         <label class="form-label">{{ event_form.responsible.label }}</label>
+                        {% if user.role in "LEAD DOC NUR" %}
+                        <select name="responsible" class="form-select">
+                            <option value="">Не назначен</option>
+                            {% for executor in executors %}
+                            <option value="{{ executor.id }}">{{ executor.get_full_name|default:executor.username }} ({{ executor.get_role_display }})</option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
                         {{ event_form.responsible }}
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal-footer">
