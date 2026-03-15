@@ -649,7 +649,8 @@ class Dashboard(RoleRequiredMixin, TemplateView):
             ctx["lead_doctors"] = None
 
         return ctx
-    
+
+
 from django.http import JsonResponse
 from accounts.models import User
 

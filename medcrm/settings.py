@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'patients',
     'clinical',
     'web',
+    'planning',
 ]
 
 

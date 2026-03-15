@@ -1,7 +1,8 @@
 # web/forms.py
 from django import forms
 from datetime import date
-from patients.models import Patient
+from patients.models import Patient, DEPARTMENT_CHOICES
+from planning.models import Event
 from clinical.models import Encounter, Note, Prescription, TreatmentPlanItem
 from accounts.models import User
 
@@ -180,3 +181,48 @@ class UserForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+
+class EventForm(forms.ModelForm):
+    """Форма создания/редактирования мероприятия."""
+    event_date = forms.DateField(
+        input_formats=['%d.%m.%Y', '%Y-%m-%d'],
+        widget=forms.DateInput(
+            attrs={
+                "type": "text",
+                "class": "form-control js-date",
+                "placeholder": "ДД.ММ.ГГГГ",
+            }
+        )
+    )
+    event_time = forms.TimeField(
+        required=False,
+        input_formats=['%H:%M', '%H:%M:%S'],
+        widget=forms.TimeInput(
+            attrs={
+                "type": "text",
+                "class": "form-control",
+                "placeholder": "ЧЧ:ММ",
+            }
+        )
+    )
+
+    class Meta:
+        model = Event
+        fields = ["title", "description", "event_type", "event_date", "event_time", "department", "responsible"]
+        labels = {
+            "title": "Название",
+            "description": "Описание",
+            "event_type": "Тип мероприятия",
+            "event_date": "Дата проведения",
+            "event_time": "Время начала",
+            "department": "Отделение",
+            "responsible": "Ответственный",
+        }
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Название мероприятия"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Описание"}),
+            "event_type": forms.Select(attrs={"class": "form-select"}),
+            "department": forms.Select(attrs={"class": "form-select"}),
+            "responsible": forms.Select(attrs={"class": "form-select"}),
+        }

@@ -663,6 +663,56 @@
             color: var(--text) !important;
         }
 
+        /* Стили для модального окна мероприятий (Planning) */
+        #eventModal .modal-content {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--line);
+        }
+
+        #eventModal .modal-header {
+            border-bottom-color: var(--line);
+        }
+
+        #eventModal .modal-footer {
+            border-top-color: var(--line);
+        }
+
+        #eventModal .modal-title {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        #eventModal .form-label {
+            color: var(--muted);
+        }
+
+        #eventModal .form-control,
+        #eventModal .form-select {
+            background: var(--surface);
+            color: var(--text);
+            border-color: var(--line);
+        }
+
+        #eventModal .form-control:focus,
+        #eventModal .form-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.16);
+        }
+
+        #eventModal .btn-close {
+            filter: var(--bs-btn-close-white-filter, none);
+        }
+
+        [data-theme="dark"] #eventModal .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        [data-theme="dark"] #eventModal .form-select option {
+            background: var(--surface);
+            color: var(--text);
+        }
+
         /* Стили для модального окна визита */
         #encounterModal .modal-content {
             background: var(--surface);
@@ -696,6 +746,7 @@
                 <ul class="navbar-nav me-auto gap-2">
                     <li class="nav-item"><a class="nav-link" href="{% url 'web:patients' %}">Пациенты</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'web:departments' %}">Статистика</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'planning:list' %}">Планирование</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-2">
                     <label class="theme-toggle" for="theme-toggle" title="Переключить тему">

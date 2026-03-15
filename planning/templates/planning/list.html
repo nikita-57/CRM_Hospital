@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Планирование — MedCRM{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Планирование мероприятий</h1>
+        <p class="page-subtitle">Управление мероприятиями и планами работы</p>
+    </div>
+    {% if can_create %}
+    <div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#eventModal">
+            + Добавить мероприятие
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Фильтры -->
+<div class="card-surface mb-4">
+    <form class="row g-3 align-items-end" method="get">
+        <div class="col-lg-3">
+            <label class="form-label">Отделение</label>
+            <select name="department" class="form-select">
+                <option value="">Все отделения</option>
+                {% for code, name in departments %}
+                <option value="{{ code }}" {% if selected_department == code %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-3">
+            <label class="form-label">Тип мероприятия</label>
+            <select name="event_type" class="form-select">
+                <option value="">Все типы</option>
+                {% for code, name in event_types %}
+                <option value="{{ code }}" {% if selected_event_type == code %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if user.role in "ADMIN REG LEAD" %}
+        <div class="col-lg-3">
+            <label class="form-label">Исполнитель</label>
+            <select name="responsible" class="form-select">
+                <option value="">Все исполнители</option>
+                {% for executor in executors %}
+                <option value="{{ executor.id }}" {% if selected_responsible == executor.id|stringformat:"s" %}selected{% endif %}>
+                    {% if executor.role == "LEAD" %}
+                    ★ {{ executor.get_full_name|default:executor.username }} — {{ executor.get_department_display }} ({{ executor.get_role_display }})
+                    {% else %}
+                    {{ executor.get_full_name|default:executor.username }} ({{ executor.get_role_display }})
+                    {% endif %}
+                </option>
+                {% empty %}
+                <option value="" disabled>Исполнители не найдены</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="col-lg-2">
+            <label class="form-label">Показать</label>
+            <select name="is_completed" class="form-select">
+                <option value="false" {% if request.GET.is_completed != 'true' %}selected{% endif %}>Активные</option>
+                <option value="true" {% if request.GET.is_completed == 'true' %}selected{% endif %}>Все</option>
+            </select>
+        </div>
+        <div class="col-lg-2">
+            <button class="btn btn-outline-primary w-100">Применить</button>
+        </div>
+        <div class="col-lg-2">
+            <a href="{% url 'planning:list' %}" class="btn btn-ghost w-100">Сбросить</a>
+        </div>
+    </form>
+</div>
+
+<!-- Таблица мероприятий -->
+{% if events %}
+<div class="card-surface p-0">
+    <div class="table-responsive">
+        <table class="table table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Тип</th>
+                    <th>Дата</th>
+                    <th>Время</th>
+                    <th>Отделение</th>
+                    <th>Ответственный</th>
+                    <th>Создал</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr class="{% if event.is_completed %}table-success{% endif %}">
+                    <td>
+                        <strong>{{ event.title }}</strong>
+                        {% if event.description %}
+                        <br><small class="text-muted">{{ event.description|truncatechars:50 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ event.get_event_type_display }}</td>
+                    <td>{{ event.event_date|date:"d.m.Y" }}</td>
+                    <td>{% if event.event_time %}{{ event.event_time|date:"H:i" }}{% else %}—{% endif %}</td>
+                    <td>{{ event.get_department_display|default:"—" }}</td>
+                    <td>{{ event.responsible.get_full_name|default:"—" }}</td>
+                    <td>{{ event.created_by.get_full_name|default:"—" }}</td>
+                    <td class="patients-actions">
+                        {% if can_toggle %}
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="event_id" value="{{ event.id }}">
+                            {% if event.is_completed %}
+                            <button type="submit" name="action" value="toggle_event" class="btn btn-sm btn-ghost" title="Вернуть в активные">
+                                ↩ Вернуть
+                            </button>
+                            {% else %}
+                            <button type="submit" name="action" value="toggle_event" class="btn btn-sm btn-ghost" title="Отметить как выполненное">
+                                ✓ Выполнить
+                            </button>
+                            {% endif %}
+                        </form>
+                        {% endif %}
+                        {% if can_delete %}
+                        <form method="post" class="d-inline" onsubmit="return confirm('Удалить мероприятие?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="event_id" value="{{ event.id }}">
+                            <button type="submit" name="action" value="delete_event" class="btn btn-sm btn-ghost text-danger" title="Удалить">
+                                ✕
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card-surface">
+    <p class="text-muted mb-0">Мероприятия не найдены.</p>
+</div>
+{% endif %}
+
+<!-- Модальное окно для добавления мероприятия -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Добавить мероприятие</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="add_event">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ event_form.title.label }}</label>
+                        {{ event_form.title }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ event_form.description.label }}</label>
+                        {{ event_form.description }}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ event_form.event_type.label }}</label>
+                            {{ event_form.event_type }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ event_form.department.label }}</label>
+                            {{ event_form.department }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ event_form.event_date.label }}</label>
+                            {{ event_form.event_date }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ event_form.event_time.label }}</label>
+                            {{ event_form.event_time }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ event_form.responsible.label }}</label>
+                        {{ event_form.responsible }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
