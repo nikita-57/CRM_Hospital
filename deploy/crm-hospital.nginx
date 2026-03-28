@@ -1,0 +1,44 @@
+server {
+    listen 80;
+    server_name _;
+
+    # Логи
+    access_log /var/log/nginx/crm-hospital-access.log;
+    error_log /var/log/nginx/crm-hospital-error.log;
+
+    # Максимальный размер загрузки
+    client_max_body_size 10M;
+
+    # Статические файлы
+    location /static/ {
+        alias /home/vitaly/CRM_Hospital/staticfiles/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Media файлы (если есть)
+    location /media/ {
+        alias /home/vitaly/CRM_Hospital/media/;
+        expires 7d;
+    }
+
+    # Прокси к Gunicorn
+    location / {
+        proxy_pass http://unix:/run/crm-hospital/gunicorn.sock;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Health check
+    location /health/ {
+        proxy_pass http://unix:/run/crm-hospital/gunicorn.sock;
+        proxy_set_header Host $host;
+        access_log off;
+    }
+}

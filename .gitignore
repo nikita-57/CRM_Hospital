@@ -19,3 +19,15 @@ node_modules/
 
 # Секретные файлы
 .env
+
+# Логи
+logs/
+*.log
+
+# Статические файлы для production
+staticfiles/
+
+# Runtime
+/run/crm-hospital/
+*.pid
+*.sock

@@ -1,0 +1,21 @@
+[Unit]
+Description=CRM Hospital Django Application
+After=network.target
+
+[Service]
+User=vitaly
+Group=vitaly
+WorkingDirectory=/home/vitaly/CRM_Hospital
+Environment="PATH=/home/vitaly/CRM_Hospital/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=medcrm.settings_production"
+ExecStart=/home/vitaly/CRM_Hospital/venv/bin/gunicorn --config gunicorn.conf.py medcrm.wsgi:application
+Restart=always
+RestartSec=5
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crm-hospital
+
+[Install]
+WantedBy=multi-user.target
